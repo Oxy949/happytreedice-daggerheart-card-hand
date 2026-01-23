@@ -29,6 +29,8 @@
             "SHOW_FEATURES_HINT": "Display active features cards in your hand.",
             "SHOW_CONSUMABLES_NAME": "Show Consumables Cards",
             "SHOW_CONSUMABLES_HINT": "Display consumable cards in your hand."
+        "AUTOHIDE_NAME": "Auto-hide delay (s)",
+        "AUTOHIDE_HINT": "Seconds of inactivity before the hand slides down (0 = disabled)",
         "KEYBOARD_HINT": "Press Alt+H to toggle the card panel visibility."
         },
         "TOOLTIPS": {
