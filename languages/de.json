@@ -21,6 +21,8 @@
             "TEMPLATE_HINT": "Wählen Sie den visuellen Stil der Karten.",
             "BOTTOM_NAME": "Abstand unten (px)",
         "BOTTOM_HINT": "Zusätzlicher Abstand unten im Kartencontainer (in Pixel).",
+        "AUTOHIDE_NAME": "Automatisches Ausblenden (s)",
+        "AUTOHIDE_HINT": "Sekunden der Inaktivität bevor die Hand nach unten verschwindet (0 = deaktiviert)",
         "KEYBOARD_HINT": "Drücken Sie Alt+H um die Sichtbarkeit des Kartenpanels zu ändern."
         },
         "TOOLTIPS": {

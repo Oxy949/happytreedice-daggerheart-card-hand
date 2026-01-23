@@ -123,12 +123,12 @@ export class HandManager {
         });
 
         game.settings.register(this.MODULE_NAME, this.SETTING_AUTOHIDE, {
-            name: this.translate("SETTINGS.AUTOHIDE_NAME") || "Auto-hide delay (s)",
-            hint: this.translate("SETTINGS.AUTOHIDE_HINT") || "Seconds of inactivity before the hand slides down (0 = disabled)",
+            name: this.translate("SETTINGS.AUTOHIDE_NAME"),
+            hint: this.translate("SETTINGS.AUTOHIDE_HINT"),
             scope: "client",
             config: true,
             type: Number,
-            default: 0,
+            default: 3,
             range: { min: 0, max: 120, step: 1 },
             onChange: () => this.refreshHand()
         });

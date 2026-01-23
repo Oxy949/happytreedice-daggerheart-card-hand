@@ -21,6 +21,8 @@
             "TEMPLATE_HINT": "Choose the visual style of the cards.",
             "BOTTOM_NAME": "Cards Bottom Padding",
         "BOTTOM_HINT": "Additional bottom padding (in pixels) inside the cards container.",
+        "AUTOHIDE_NAME": "Auto-hide delay (s)",
+        "AUTOHIDE_HINT": "Seconds of inactivity before the hand slides down (0 = disabled)",
         "KEYBOARD_HINT": "Press Alt+H to toggle the card panel visibility."
         },
         "TOOLTIPS": {
