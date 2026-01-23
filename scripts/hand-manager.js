@@ -15,6 +15,7 @@ export class HandManager {
     static SETTING_SCALE = 'handScale';
     static SETTING_WIDTH = 'handWidthPx';
     static SETTING_BOTTOM = 'bottom';
+    static SETTING_AUTOHIDE = 'autoHideSeconds';
 
     static _currentActor = null;
     static _isCollapsed = false;
@@ -26,6 +27,7 @@ export class HandManager {
     static _$wrapper = null;
     static _refreshDebounceTimer = null;
     static _lastItemsSignature = null;
+    static _autoHideTimer = null;
 
     static getSetting(key) {
         try {
@@ -118,6 +120,17 @@ export class HandManager {
             default: 15,
             range: { min: 0, max: 400, step: 1 },
             onChange: () => this.applyStyles()
+        });
+
+        game.settings.register(this.MODULE_NAME, this.SETTING_AUTOHIDE, {
+            name: this.translate("SETTINGS.AUTOHIDE_NAME") || "Auto-hide delay (s)",
+            hint: this.translate("SETTINGS.AUTOHIDE_HINT") || "Seconds of inactivity before the hand slides down (0 = disabled)",
+            scope: "client",
+            config: true,
+            type: Number,
+            default: 0,
+            range: { min: 0, max: 120, step: 1 },
+            onChange: () => this.refreshHand()
         });
 
         game.settings.register(this.MODULE_NAME, this.SETTING_WIDTH, {
@@ -448,6 +461,10 @@ export class HandManager {
             this.savePosition(newLeft);
         });
 
+        // Setup auto-hide behavior (hover to show, timeout to hide)
+        this.setupAutoHideHandlers();
+        this.startAutoHideTimer();
+
         const isEnabled = this.getSetting(this.SETTING_ENABLED);
 
         if (!isEnabled) {
@@ -538,6 +555,73 @@ export class HandManager {
                 this._dndInstance.updatePosition(pos.left);
             }
         }
+    }
+
+    // --- Auto-hide helpers ---
+
+    static setupAutoHideHandlers() {
+        if (!this._$panel) return;
+
+        // Ensure previous handlers are removed
+        this._$panel.off('.handAutoHide');
+
+        // When the mouse enters the hand area, show it and cancel timer
+        this._$panel.on('mouseenter.handAutoHide', () => {
+            this.clearAutoHideTimer();
+            this.showHandByY();
+        });
+
+        // When mouse leaves the hand area, restart timer
+        this._$panel.on('mouseleave.handAutoHide', () => {
+            this.startAutoHideTimer();
+        });
+    }
+
+    static startAutoHideTimer() {
+        this.clearAutoHideTimer();
+        const secs = Number(this.getSetting(this.SETTING_AUTOHIDE)) || 0;
+        if (!this._$panel || secs <= 0) return;
+
+        this._autoHideTimer = setTimeout(() => {
+            this.hideHandByY();
+        }, secs * 1000);
+    }
+
+    static clearAutoHideTimer() {
+        if (this._autoHideTimer) {
+            clearTimeout(this._autoHideTimer);
+            this._autoHideTimer = null;
+        }
+    }
+
+    static setPanelYOffset(yPx) {
+        if (!this._$panel) return;
+        const el = this._$panel[0];
+
+        // Prefer inline transform if present, otherwise fallback to CSS default translateX(-50%)
+        let base = el.style.transform && el.style.transform.length ? el.style.transform : '';
+        if (!base) base = 'translateX(-50%)';
+
+        // Remove any existing translateY(...) part
+        base = base.replace(/translateY\([^)]*\)/g, '').trim();
+
+        // Apply animated transform (preserve X translate)
+        el.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+        el.style.transform = `${base} translateY(${yPx}px)`;
+    }
+
+    static showHandByY() {
+        this.setPanelYOffset(0);
+    }
+
+    static hideHandByY() {
+        if (!this._$wrapper || !this._$panel) return;
+
+        const wrapperHeight = this._$wrapper.outerHeight() || 250;
+        // Move the panel down by (wrapperHeight + extra) so cards are off-screen vertically
+        const extra = 24;
+        const y = wrapperHeight + extra;
+        this.setPanelYOffset(y);
     }
 
     static refreshHandDebounced() {
@@ -648,6 +732,9 @@ export class HandManager {
             $container.empty();
             $container.append(fragment);
             this.applyCardFanLayout();
+            // Reset/show hand and start auto-hide timer after rendering
+            this.showHandByY();
+            this.startAutoHideTimer();
         });
     }
 

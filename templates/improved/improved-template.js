@@ -57,12 +57,13 @@ const cssContent = `
     justify-content: center;
     align-items: flex-end;
     pointer-events: none;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .hand-wrapper {
     position: relative;
     height: 250px;
-    pointer-events: none;
+    pointer-events: all;
     transition: width 0.2s ease;
     display: flex;
     justify-content: center;
