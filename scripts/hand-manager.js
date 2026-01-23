@@ -23,7 +23,9 @@ export class HandManager {
     // Optimization: Cache DOM elements
     static _$panel = null;
     static _$container = null;
+    static _$wrapper = null;
     static _refreshDebounceTimer = null;
+    static _lastItemsSignature = null;
 
     static getSetting(key) {
         try {
@@ -438,6 +440,7 @@ export class HandManager {
         // Cache references immediately
         this._$panel = $('#daggerheart-hand');
         this._$container = this._$panel.find('.dh-cards-container');
+        this._$wrapper = this._$panel.find('.hand-wrapper');
 
         this.applyStyles();
 
@@ -561,12 +564,12 @@ export class HandManager {
         }
 
         const $container = this._$container;
-        $container.empty();
 
         let actor = controlled[0].actor;
         this._currentActor = actor;
 
         if (!actor) {
+            $container.empty();
             $container.append(`<div class="no-cards">${this.translate('NO_ACTOR')}</div>`);
             return;
         }
@@ -599,6 +602,7 @@ export class HandManager {
         const adversaryStandard = isAdversary ? this._createAdversaryStandardAttack(actor) : null;
 
         if (cards.length === 0 && !adversaryStandard) {
+            $container.empty();
             $container.append(`<div class="no-cards">${this.translate('NO_ITEMS')}</div>`);
             return;
         }
@@ -612,24 +616,39 @@ export class HandManager {
             return typeScore(a.type) - typeScore(b.type) || a.name.localeCompare(b.name);
         });
 
-        // Получаем текущий шаблон
-        const template = this.currentTemplate;
+        // Build a lightweight signature of the visible items to avoid unnecessary DOM rebuilds.
+        const sigParts = cards.map(i => `${i.id}:${i.name}:${i.type}:${i.system?.equipped ? 1 : 0}`);
+        if (adversaryStandard) sigParts.unshift(`adv:${adversaryStandard.id}`);
+        const templateId = this.getSetting(this.SETTING_TEMPLATE);
+        const scale = this.getSetting(this.SETTING_SCALE);
+        const signature = `${actor.id}|${templateId}|${scale}|${sigParts.join(',')}`;
 
-        const fragment = document.createDocumentFragment();
-
-        // If we built a synthetic adversary attack, add it first
-        if (adversaryStandard) {
-            const el = this.createCardElement(adversaryStandard, template);
-            fragment.appendChild(el[0]);
+        if (this._lastItemsSignature === signature) {
+            // Nothing changed in items or relevant settings; still ensure layout is correct.
+            this.applyCardFanLayout();
+            return;
         }
+        this._lastItemsSignature = signature;
 
-        cards.forEach(item => {
-            const el = this.createCardElement(item, template);
-            fragment.appendChild(el[0]);
+        // Defer heavy DOM operations to the next animation frame to avoid layout thrashing.
+        const template = this.currentTemplate;
+        window.requestAnimationFrame(() => {
+            const fragment = document.createDocumentFragment();
+
+            if (adversaryStandard) {
+                const el = this.createCardElement(adversaryStandard, template);
+                fragment.appendChild(el[0]);
+            }
+
+            cards.forEach(item => {
+                const el = this.createCardElement(item, template);
+                fragment.appendChild(el[0]);
+            });
+
+            $container.empty();
+            $container.append(fragment);
+            this.applyCardFanLayout();
         });
-
-        $container.append(fragment);
-        this.applyCardFanLayout();
     }
 
     static createCardElement(item, template) {
@@ -704,7 +723,7 @@ export class HandManager {
         if (count === 0) return;
 
         const maxAngle = this.getSetting(this.SETTING_ARC_ANGLE);
-        const wrapperWidth = this._$panel.find('.hand-wrapper').width();
+        const wrapperWidth = (this._$wrapper && this._$wrapper.length) ? this._$wrapper.width() : this._$panel.find('.hand-wrapper').width();
         const cardWidth = 160;
         const availableSpace = wrapperWidth - 40;
 

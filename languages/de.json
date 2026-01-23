@@ -20,7 +20,8 @@
             "TEMPLATE_NAME": "Kartenvorlage",
             "TEMPLATE_HINT": "Wählen Sie den visuellen Stil der Karten.",
             "BOTTOM_NAME": "Abstand unten (px)",
-            "BOTTOM_HINT": "Zusätzlicher Abstand unten im Kartencontainer (in Pixel)."
+        "BOTTOM_HINT": "Zusätzlicher Abstand unten im Kartencontainer (in Pixel).",
+        "KEYBOARD_HINT": "Drücken Sie Alt+H um die Sichtbarkeit des Kartenpanels zu ändern."
         },
         "TOOLTIPS": {
             "DRAG": "Ziehen (X)",
