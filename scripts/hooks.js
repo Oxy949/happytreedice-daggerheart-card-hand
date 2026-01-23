@@ -21,7 +21,23 @@ export function registerHooks() {
 }
 
 function setupRuntimeHooks() {
-    Hooks.on("controlToken", () => HandManager.refreshHand());
+    Hooks.on("controlToken", () => {
+        const controlled = canvas.tokens?.controlled || [];
+        if (controlled.length === 0) {
+            if (HandManager._currentActor) {
+                HandManager._currentActor = null;
+                HandManager.refreshHandDebounced();
+            }
+            return;
+        }
+
+        const actor = controlled[0].actor;
+        if (actor && HandManager._currentActor && actor.id === HandManager._currentActor.id) {
+            // Same actor still controlled — avoid unnecessary refresh
+            return;
+        }
+        HandManager.refreshHandDebounced();
+    });
 
     Hooks.on("updateActor", (actor) => {
         if (HandManager._currentActor && actor.id === HandManager._currentActor.id) {
@@ -48,5 +64,19 @@ function setupRuntimeHooks() {
                 HandManager.useItem(item);
             }
         });
+    });
+
+    // Register keyboard shortcut for toggling the hand panel
+    Hooks.on("hotbarDrop", () => {
+        // Hotbar already handles default key bindings
+    });
+
+    // Listen for keyboard events to toggle hand
+    document.addEventListener('keydown', (event) => {
+        // Check if Alt+H is pressed (configurable via keybinds)
+        if ((event.altKey || event.ctrlKey) && event.code === 'KeyH') {
+            event.preventDefault();
+            HandManager.toggleHand();
+        }
     });
 }

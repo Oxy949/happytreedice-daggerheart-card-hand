@@ -17,6 +17,9 @@ export class SmoothDnD {
         this.onDragMove = this.onDragMove.bind(this);
         this.onDragEnd = this.onDragEnd.bind(this);
 
+        this._rafId = null;
+        this._pendingDx = 0;
+
         this.init();
     }
 
@@ -55,9 +58,15 @@ export class SmoothDnD {
         const clientX = (e.type === 'touchmove') ? e.touches[0].clientX : e.clientX;
         const dx = clientX - this.startX;
 
-        // Блокируем Y, меняем только X
-        this.el.style.transform = `translate3d(calc(-50% + ${dx}px), 0, 0)`;
+        // Throttle transform updates via requestAnimationFrame to reduce layout thrash
+        this._pendingDx = dx;
         this.currentX = dx;
+        if (this._rafId == null) {
+            this._rafId = requestAnimationFrame(() => {
+                this.el.style.transform = `translate3d(calc(-50% + ${this._pendingDx}px), 0, 0)`;
+                this._rafId = null;
+            });
+        }
     }
 
     onDragEnd(e) {
@@ -108,6 +117,10 @@ export class CardSmoothDnD {
         this.onDragEnd = this.onDragEnd.bind(this);
 
         this.init();
+
+        this._rafId = null;
+        this._pendingDx = 0;
+        this._pendingDy = 0;
     }
 
     init() {
@@ -156,9 +169,16 @@ export class CardSmoothDnD {
         const dx = clientX - this.startClientX;
         const dy = clientY - this.startClientY;
 
-        // Optimization: Use translate3d for hardware acceleration
-        this.el.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(1.1)`;
-        this.el.style.zIndex = 9999;
+        // Throttle transform updates via requestAnimationFrame for smoothness
+        this._pendingDx = dx;
+        this._pendingDy = dy;
+        if (this._rafId == null) {
+            this._rafId = requestAnimationFrame(() => {
+                this.el.style.transform = `translate3d(${this._pendingDx}px, ${this._pendingDy}px, 0) rotate(0deg) scale(1.1)`;
+                this.el.style.zIndex = 9999;
+                this._rafId = null;
+            });
+        }
     }
 
     onDragEnd(e) {
