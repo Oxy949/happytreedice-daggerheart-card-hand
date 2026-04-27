@@ -287,7 +287,7 @@ export class HandManager {
     static formatRange(range) {
         if (!range && range !== 0) return '';
         const i18n = (typeof game !== 'undefined' && game.i18n) ? game.i18n : null;
-        const rangeLabel = i18n && i18n.has('DAGGERHEART.GENERAL.range') ? i18n.localize('DAGGERHEART.GENERAL.range') : 'Range';
+        const rangeLabel = i18n && i18n.has('DAGGERHEART.GENERAL.range') ? i18n.localize('DAGGERHEART.GENERAL.range') : this.translate('RANGE');
 
         let type = '';
         let value = '';
@@ -377,7 +377,7 @@ export class HandManager {
         // Попробуем взять данные атаки из actor.system.attack, если есть
         const atk = actor.system?.attack || actor.system?.actions || null;
 
-        const atkName = atk?.name || 'Standard Attack';
+        const atkName = atk?.name || this.translate('STANDARD_ATTACK');
         const img = atk?.img || 'icons/svg/sword.svg';
 
         // Damage parts: если в данных актора есть parts, используем их, иначе дефолт
@@ -832,7 +832,7 @@ export class HandManager {
                 }
 
                 // Для синтетических карточек (например, атака противника) показываем простое модальное окно с описанием
-                const title = item?.name || "Item";
+                const title = item?.name || this.translate("ITEM");
                 const desc = HandManager.formatDescription(item?.system?.description?.value || item?.system?.description || '');
                 const content = `<div class="dh-item-sheet-preview">${desc}</div>`;
 
@@ -841,7 +841,7 @@ export class HandManager {
                     new Dialog({
                         title,
                         content,
-                        buttons: { close: { label: game.i18n?.localize?.('Close') || 'Close' } },
+                        buttons: { close: { label: this.translate("CLOSE") } },
                         default: 'close'
                     }).render(true);
                 } else {
