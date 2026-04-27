@@ -32,6 +32,7 @@ export class HandManager {
     static _refreshDebounceTimer = null;
     static _lastItemsSignature = null;
     static _autoHideTimer = null;
+    static _activeCardDrags = 0;
 
     static getSetting(key) {
         try {
@@ -613,9 +614,10 @@ export class HandManager {
     static startAutoHideTimer() {
         this.clearAutoHideTimer();
         const secs = Number(this.getSetting(this.SETTING_AUTOHIDE)) || 0;
-        if (!this._$panel || secs <= 0) return;
+        if (!this._$panel || secs <= 0 || this._activeCardDrags > 0) return;
 
         this._autoHideTimer = setTimeout(() => {
+            if (this._activeCardDrags > 0) return;
             this.hideHandByY();
         }, secs * 1000);
     }
@@ -649,12 +651,24 @@ export class HandManager {
 
     static hideHandByY() {
         if (!this._$wrapper || !this._$panel) return;
+        if (this._activeCardDrags > 0) return;
 
         const wrapperHeight = this._$wrapper.outerHeight() || 250;
         // Move the panel down by (wrapperHeight + extra) so cards are off-screen vertically
         const extra = 24;
         const y = wrapperHeight + extra;
         this.setPanelYOffset(y);
+    }
+
+    static pauseAutoHideForCardDrag() {
+        this._activeCardDrags += 1;
+        this.clearAutoHideTimer();
+        this.showHandByY();
+    }
+
+    static resumeAutoHideAfterCardDrag() {
+        this._activeCardDrags = Math.max(0, this._activeCardDrags - 1);
+        if (this._activeCardDrags === 0) this.startAutoHideTimer();
     }
 
     static refreshHandDebounced() {
@@ -791,6 +805,9 @@ export class HandManager {
             this.useItem(item);
         }, () => {
             this.applyCardFanLayout();
+        }, {
+            onDragStarted: () => this.pauseAutoHideForCardDrag(),
+            onDragEnded: () => this.resumeAutoHideAfterCardDrag()
         });
 
         // Открыть описание предмета по ПКМ (контекстное меню) — как при выборе "Редактировать"

@@ -63,8 +63,9 @@ export class SmoothDnD {
         this.currentX = dx;
         if (this._rafId == null) {
             this._rafId = requestAnimationFrame(() => {
-                this.el.style.transform = `translate3d(calc(-50% + ${this._pendingDx}px), 0, 0)`;
                 this._rafId = null;
+                if (!this.isDragging) return;
+                this.el.style.transform = `translate3d(calc(-50% + ${this._pendingDx}px), 0, 0)`;
             });
         }
     }
@@ -75,6 +76,11 @@ export class SmoothDnD {
         this.el.classList.remove('dragging');
         document.body.style.cursor = "default";
         document.body.classList.remove('dragging-active');
+
+        if (this._rafId != null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
 
         let finalLeft = this.initialLeft + this.currentX;
         const panelWidth = this.el.offsetWidth;
@@ -100,10 +106,12 @@ export class SmoothDnD {
  * Заменяет HTML5 Drag API.
  */
 export class CardSmoothDnD {
-    constructor(element, onDropToPlay, onReturnToHand) {
+    constructor(element, onDropToPlay, onReturnToHand, options = {}) {
         this.el = element;
         this.onDropToPlay = onDropToPlay;
         this.onReturnToHand = onReturnToHand;
+        this.onDragStarted = options.onDragStarted;
+        this.onDragEnded = options.onDragEnded;
 
         this.isDragging = false;
         this.startX = 0;
@@ -132,6 +140,10 @@ export class CardSmoothDnD {
         if (e.type === 'mousedown' && e.button !== 0) return;
 
         this.isDragging = true;
+        if (this._rafId != null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
 
         if (e.type === 'touchstart') {
             this.startClientX = e.touches[0].clientX;
@@ -151,6 +163,8 @@ export class CardSmoothDnD {
         document.addEventListener('mouseup', this.onDragEnd);
         document.addEventListener('touchmove', this.onDragMove, { passive: false });
         document.addEventListener('touchend', this.onDragEnd);
+
+        if (this.onDragStarted) this.onDragStarted();
     }
 
     onDragMove(e) {
@@ -174,9 +188,10 @@ export class CardSmoothDnD {
         this._pendingDy = dy;
         if (this._rafId == null) {
             this._rafId = requestAnimationFrame(() => {
+                this._rafId = null;
+                if (!this.isDragging) return;
                 this.el.style.transform = `translate3d(${this._pendingDx}px, ${this._pendingDy}px, 0) rotate(0deg) scale(1.1)`;
                 this.el.style.zIndex = 9999;
-                this._rafId = null;
             });
         }
     }
@@ -195,6 +210,11 @@ export class CardSmoothDnD {
         document.removeEventListener('touchmove', this.onDragMove);
         document.removeEventListener('touchend', this.onDragEnd);
 
+        if (this._rafId != null) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+        }
+
         let clientY;
         if (e.type === 'touchend') {
             clientY = e.changedTouches[0].clientY;
@@ -203,15 +223,15 @@ export class CardSmoothDnD {
         }
 
         const totalDy = clientY - this.startClientY;
+        const shouldPlay = totalDy < -100;
 
         // Если карту потянули вверх более чем на 100px - считаем это использованием
-        if (totalDy < -100) {
-            if (this.onDropToPlay) this.onDropToPlay();
+        try {
             this.el.style.transform = '';
             if (this.onReturnToHand) this.onReturnToHand();
-        } else {
-            this.el.style.transform = '';
-            if (this.onReturnToHand) this.onReturnToHand();
+            if (shouldPlay && this.onDropToPlay) this.onDropToPlay();
+        } finally {
+            if (this.onDragEnded) this.onDragEnded();
         }
     }
 }
