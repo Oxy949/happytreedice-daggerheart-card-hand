@@ -180,6 +180,15 @@ export class HandManager {
         return game.i18n.localize(key);
     }
 
+    static getHandActor() {
+        const controlled = canvas.tokens?.controlled || [];
+        if (controlled.length > 0) return controlled[0]?.actor || null;
+
+        const character = game.user?.character;
+        if (typeof character === 'string') return game.actors?.get(character) || null;
+        return character || null;
+    }
+
     static itemHasActions(item) {
         const actions = item.system?.actions;
         if (!actions) return false;
@@ -498,9 +507,7 @@ export class HandManager {
             return;
         }
 
-        const controlled = canvas.tokens?.controlled || [];
-
-        if (controlled.length === 0) {
+        if (!this.getHandActor()) {
             this._$panel.addClass('hidden');
             this._currentActor = null; // Сбрасываем текущего актера
             return;
@@ -664,8 +671,8 @@ export class HandManager {
             return;
         }
 
-        const controlled = canvas.tokens?.controlled || [];
-        if (controlled.length === 0) {
+        const actor = this.getHandActor();
+        if (!actor) {
             this._$panel.addClass('hidden');
             this._currentActor = null;
             return;
@@ -675,14 +682,7 @@ export class HandManager {
 
         const $container = this._$container;
 
-        let actor = controlled[0].actor;
         this._currentActor = actor;
-
-        if (!actor) {
-            $container.empty();
-            $container.append(`<div class="no-cards">${this.translate('NO_ACTOR')}</div>`);
-            return;
-        }
 
         const allItems = actor.items ? Array.from(actor.items) : [];
 

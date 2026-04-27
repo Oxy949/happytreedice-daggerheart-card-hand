@@ -14,7 +14,7 @@ export function registerHooks() {
         setupRuntimeHooks();
         HandManager.restorePosition();
 
-        if (canvas.tokens?.controlled.length) {
+        if (HandManager.getHandActor()) {
             HandManager.refreshHand();
         }
     });
@@ -22,8 +22,8 @@ export function registerHooks() {
 
 function setupRuntimeHooks() {
     Hooks.on("controlToken", () => {
-        const controlled = canvas.tokens?.controlled || [];
-        if (controlled.length === 0) {
+        const actor = HandManager.getHandActor();
+        if (!actor) {
             if (HandManager._currentActor) {
                 HandManager._currentActor = null;
                 HandManager.refreshHandDebounced();
@@ -31,12 +31,17 @@ function setupRuntimeHooks() {
             return;
         }
 
-        const actor = controlled[0].actor;
         if (actor && HandManager._currentActor && actor.id === HandManager._currentActor.id) {
             // Same actor still controlled — avoid unnecessary refresh
             return;
         }
         HandManager.refreshHandDebounced();
+    });
+
+    Hooks.on("updateUser", (user, changes = {}) => {
+        if (user.id === game.user.id && Object.prototype.hasOwnProperty.call(changes, "character")) {
+            HandManager.refreshHandDebounced();
+        }
     });
 
     Hooks.on("updateActor", (actor) => {
