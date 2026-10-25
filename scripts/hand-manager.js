@@ -34,7 +34,7 @@ export class HandManager {
     /** @type {HTMLElement|null} */
     static _container = null;
     static _refreshDebounceTimer = null;
-    static _lastItemsSignature = null;
+    static _renderGeneration = 0;
     static _autoHideTimer = null;
     static _autoHideHandlers = null;
     static _activeCardDrags = 0;
@@ -467,7 +467,6 @@ export class HandManager {
         }
         this.clearAutoHideTimer();
         this._autoHideHandlers?.abort();
-        this._lastItemsSignature = null;
         this._panel?.remove();
         this._panel = null;
         this._container = null;
@@ -713,6 +712,7 @@ export class HandManager {
     }
 
     static refreshHand() {
+        const renderGeneration = ++this._renderGeneration;
         if (!this._panel) this.createHandPanel();
         if (!this._panel) return;
 
@@ -773,7 +773,6 @@ export class HandManager {
         const adversaryStandard = isAdversary ? this._createAdversaryStandardAttack(actor) : null;
 
         if (cards.length === 0 && !adversaryStandard) {
-            this._lastItemsSignature = null;
             container.replaceChildren();
             container.insertAdjacentHTML('beforeend', `<div class="no-cards">${this.escapeHtml(this.translate('NO_ITEMS'))}</div>`);
             return;
@@ -788,25 +787,12 @@ export class HandManager {
             return typeScore(a.type) - typeScore(b.type) || a.name.localeCompare(b.name);
         });
 
-        // Build a lightweight signature of the visible items to avoid unnecessary DOM rebuilds.
-        const sigParts = cards.map(i => `${i.id}:${i.name}:${i.type}:${i.system?.equipped ? 1 : 0}`);
-        if (adversaryStandard) sigParts.unshift(`adv:${adversaryStandard.id}`);
-        const templateId = this.getSetting(this.SETTING_TEMPLATE);
-        const scale = this.getSetting(this.SETTING_SCALE);
-        const signature = `${actor.id}|${templateId}|${scale}|${sigParts.join(',')}`;
-
-        if (this._lastItemsSignature === signature) {
-            // Nothing changed in items or relevant settings; still ensure layout is correct.
-            this.applyCardFanLayout();
-            this.showHandByY();
-            this.startAutoHideTimer();
-            return;
-        }
-        this._lastItemsSignature = signature;
-
         // Defer heavy DOM operations to the next animation frame to avoid layout thrashing.
         const template = this.currentTemplate;
         window.requestAnimationFrame(() => {
+            // A newer refresh may have hidden or rebuilt the panel before this frame.
+            if (renderGeneration !== this._renderGeneration || container !== this._container) return;
+
             const fragment = document.createDocumentFragment();
 
             if (adversaryStandard) {
