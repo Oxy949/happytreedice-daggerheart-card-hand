@@ -1,4 +1,5 @@
 import { HandManager } from './hand-manager.js';
+import { MODULE_ID, REGISTER_HOOK } from './registry.js';
 
 /**
  * Registers all Foundry VTT Hooks.
@@ -6,6 +7,11 @@ import { HandManager } from './hand-manager.js';
  */
 export function registerHooks() {
     Hooks.once('i18nInit', () => {
+        // Let external modules register their card templates before the
+        // settings dropdown is built. Listeners must be attached during "init".
+        const api = game.modules.get(MODULE_ID)?.api;
+        Hooks.callAll(REGISTER_HOOK, api);
+
         HandManager.registerSettings();
     });
 
@@ -44,9 +50,8 @@ function setupRuntimeHooks() {
         }
     });
 
-    Hooks.on("updateActor", (actor) => {
+    Hooks.on('updateActor', (actor) => {
         if (HandManager._currentActor && actor.id === HandManager._currentActor.id) {
-            // Using debounced refresh for performance
             HandManager.refreshHandDebounced();
         }
     });
@@ -57,12 +62,12 @@ function setupRuntimeHooks() {
         }
     };
 
-    Hooks.on("createItem", refreshIfCurrent);
-    Hooks.on("deleteItem", refreshIfCurrent);
-    Hooks.on("updateItem", refreshIfCurrent);
+    Hooks.on('createItem', refreshIfCurrent);
+    Hooks.on('deleteItem', refreshIfCurrent);
+    Hooks.on('updateItem', refreshIfCurrent);
 
-    Hooks.on("dropCanvasData", (canvas, data) => {
-        if (data.type !== "Item" || !data.uuid) return;
+    Hooks.on('dropCanvasData', (canvas, data) => {
+        if (data.type !== 'Item' || !data.uuid) return;
         fromUuid(data.uuid).then(item => {
             if (!item) return;
             if (HandManager._currentActor && item.parent?.id === HandManager._currentActor.id) {

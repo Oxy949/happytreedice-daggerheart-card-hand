@@ -367,13 +367,17 @@ function attachStyles() {
   style.id = id;
   style.appendChild(document.createTextNode(cssContent));
   document.head.appendChild(style);
-  console.log('Quick Items Daggerheart | Styles injected (default)');
+}
+
+function detachStyles() {
+  document.getElementById(`${cssId}-improved`)?.remove();
 }
 
 const ImprovedTemplate = {
   id: 'improved',
   name: 'Improved Daggerheart',
   attachStyles,
+  detachStyles,
 
   /**
    * Генерирует HTML для панели руки.
@@ -382,22 +386,7 @@ const ImprovedTemplate = {
    * @param {string} options.noActorText - Текст, если актер не выбран.
    * @returns {string} HTML строка.
    */
-  renderPanel: (options) => {
-    const { dragTitle, noActorText } = options;
-    return `
-            <div id="daggerheart-hand">
-                <div class="hand-wrapper">
-                    <div class="hand-background-plate" id="dh-hand-drag-target">
-                        <div class="drag-handle-area" title="${dragTitle}"></div>
-                    </div>
-                    
-                    <div class="dh-cards-container">
-                        <div class="no-cards">${noActorText}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-  },
+  renderPanel: (options) => HandManager.renderDefaultPanel(options),
 
   /**
    * Генерирует HTML для отдельной карты.
@@ -436,7 +425,7 @@ const ImprovedTemplate = {
     // clamp just in case
     fontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
 
-    
+
     // Определение домена
     let domainKey = "default";
     let domainCardType = "default";
@@ -446,7 +435,7 @@ const ImprovedTemplate = {
     } else if (item.type === 'class') {
       domainKey = item.name.toLowerCase();
     }
-    
+
 
     const domainColor = DOMAIN_COLORS[domainKey] || DOMAIN_COLORS.default;
     const domainFontColor = DOMAIN_TEXT_COLORS[domainKey] || DOMAIN_TEXT_COLORS.default;
@@ -506,7 +495,7 @@ const ImprovedTemplate = {
                       <div class="title-bg" style="--divider-url: url('${dividerSrc}'); --domain-color: ${domainColor};"><div class="title-bg-inner"></div></div>
                       <p class="card-type" style="color: ${domainFontColor};">${itemTypeLocalized}</p>
                     </div>
-                    <div class="card-title">${item.name}</div>
+                    <div class="card-title">${HandManager.escapeHtml(item.name)}</div>
                     ${damageHtml}
                     <div class="description" style="font-size: ${fontSize}px;">
                     ${plainDesc}</div>
