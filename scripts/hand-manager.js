@@ -583,7 +583,16 @@ export class HandManager {
     static applyStyles() {
         if (!this._panel) return;
 
-        this._panel.classList.toggle('hide-hand-background', Boolean(this.getSetting(this.SETTING_HIDE_BACKGROUND)));
+        const hideBackground = Boolean(this.getSetting(this.SETTING_HIDE_BACKGROUND));
+        const background = this._panel.querySelector('.hand-background-plate');
+        if (background) {
+            // Template styles are unlayered and can override Foundry's module CSS layer.
+            // Hide only the decoration so the plate remains available for dragging.
+            for (const property of ['background', 'border', 'box-shadow']) {
+                if (hideBackground) background.style.setProperty(property, 'none', 'important');
+                else background.style.removeProperty(property);
+            }
+        }
 
         const scale = this.getSetting(this.SETTING_SCALE);
         const width = Math.max(600, this.getSetting(this.SETTING_WIDTH));
