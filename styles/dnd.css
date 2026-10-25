@@ -228,6 +228,13 @@ body.dragging-active {
     display: none !important;
 }
 
+/* Keep the transparent plate available as a drag target. */
+#daggerheart-hand.hide-hand-background .hand-background-plate {
+    background: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 #daggerheart-hand.collapsed .hand-wrapper {
     height: 0;
 }

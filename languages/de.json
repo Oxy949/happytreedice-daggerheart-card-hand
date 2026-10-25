@@ -21,6 +21,8 @@
             "WIDTH_HINT": "Feste Breite des Kartenpanels (min. 600).",
             "ENABLED_NAME": "Kartenhand aktivieren",
             "ENABLED_HINT": "Zeigt die Kartenhand-Oberfläche auf dem Bildschirm an.",
+            "HIDE_BACKGROUND_NAME": "Hintergrund der Kartenhand ausblenden",
+            "HIDE_BACKGROUND_HINT": "Blendet den dunklen Hintergrund, Rahmen und Schatten hinter den Karten aus. Das Panel lässt sich weiterhin im selben Bereich ziehen.",
             "TEMPLATE_NAME": "Kartenvorlage",
             "TEMPLATE_HINT": "Wähle den visuellen Stil der Karten.",
             "BOTTOM_NAME": "Unterer Kartenabstand",

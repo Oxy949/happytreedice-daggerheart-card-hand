@@ -22,6 +22,7 @@ export class HandManager {
     static SETTING_SHOW_FEATURES = 'showFeatures';
     static SETTING_SHOW_CONSUMABLES = 'showConsumables';
     static SETTING_AUTOHIDE = 'autoHideSeconds';
+    static SETTING_HIDE_BACKGROUND = 'hideHandBackground';
 
     static _currentActor = null;
     static _isCollapsed = false;
@@ -52,6 +53,7 @@ export class HandManager {
                 [this.SETTING_SCALE]: 1.0,
                 [this.SETTING_WIDTH]: 800,
                 [this.SETTING_BOTTOM]: 15,
+                [this.SETTING_HIDE_BACKGROUND]: false,
                 [this.SETTING_SHOW_WEAPONS]: true,
                 [this.SETTING_SHOW_DOMAIN_CARDS]: true,
                 [this.SETTING_SHOW_FEATURES]: true,
@@ -71,6 +73,16 @@ export class HandManager {
             type: Boolean,
             default: true,
             onChange: () => this.refreshHand()
+        });
+
+        game.settings.register(this.MODULE_NAME, this.SETTING_HIDE_BACKGROUND, {
+            name: this.translate("SETTINGS.HIDE_BACKGROUND_NAME"),
+            hint: this.translate("SETTINGS.HIDE_BACKGROUND_HINT"),
+            scope: "client",
+            config: true,
+            type: Boolean,
+            default: false,
+            onChange: () => this.applyStyles()
         });
 
         game.settings.register(this.MODULE_NAME, this.SETTING_TEMPLATE, {
@@ -570,6 +582,8 @@ export class HandManager {
 
     static applyStyles() {
         if (!this._panel) return;
+
+        this._panel.classList.toggle('hide-hand-background', Boolean(this.getSetting(this.SETTING_HIDE_BACKGROUND)));
 
         const scale = this.getSetting(this.SETTING_SCALE);
         const width = Math.max(600, this.getSetting(this.SETTING_WIDTH));
