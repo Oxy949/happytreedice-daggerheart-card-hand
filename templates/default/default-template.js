@@ -274,13 +274,11 @@ const cssContent = `
     color: #231f20;
     line-height: 1.3;
     text-align: left;
-    overflow: auto;
+    overflow: hidden;
     overflow-wrap: anywhere;
-    scrollbar-width: thin;
-    overscroll-behavior: contain;
   }
 
-  #daggerheart-hand .dhc-text p { margin: 0 0 5px 0; }
+  #daggerheart-hand .dhc-text p { margin: 0 0 0.35em; }
   #daggerheart-hand .dhc-text ul, #daggerheart-hand .dhc-text ol { margin: 0; padding-left: 16px; text-align: left; }
 
   /* Weapon damage block */

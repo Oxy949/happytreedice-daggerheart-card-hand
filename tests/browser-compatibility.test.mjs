@@ -41,6 +41,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
             const translations = {
                 'TYPES.Item.weapon': 'Оружие', 'TYPES.Item.feature': 'Свойство',
                 'DAGGERHEART.CONFIG.DomainCardTypes.ability': 'Способность',
+                'DAGGERHEART.CONFIG.DomainCardTypes.spell': 'Заклинание',
                 'DAGGERHEART.CONFIG.Range.melee.short': 'Вплотную',
                 'DAGGERHEART.GENERAL.range': 'Дистанция'
             };
@@ -64,13 +65,20 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
                 { id: 'domain', name: 'Отбрасывающий удар', type: 'domainCard', img, system: { level: 1, recallCost: 0, domain: 'valor', type: 'ability',
                     description: '<p>Совершите атаку вашим основным оружием по цели, находящейся вплотную. При успехе вы наносите урон и отталкиваете цель на среднюю дистанцию. При успехе с Надеждой добавьте <strong>6</strong> к броску урона.</p><p>Кроме того, вы можете <strong>потратить Надежду</strong>, чтобы в дополнение к этому временно сделать цель <em>уязвимой</em>.</p>' } },
                 { id: 'long', name: 'Очень длинное название способности в несколько строк', type: 'feature', img,
-                    system: { actionsList: [{}], description: '<p>Длинное описание с выделением <strong>важных правил</strong>.</p>'.repeat(30) } }
+                    system: { actionsList: [{}], description: '<p>Совершите атаку вашим основным оружием по цели, находящейся вплотную. При успехе вы наносите урон и отталкиваете цель на среднюю дистанцию. При успехе с Надеждой добавьте <strong>6</strong> к броску урона. Кроме того, вы можете <strong>потратить Надежду</strong>, чтобы временно сделать цель <em>уязвимой</em>.</p>'.repeat(4) } }
             ];
+            items.push({ id: 'healing', name: 'Исцеляющее касание', type: 'domainCard', img,
+                system: { level: 1, recallCost: 1, domain: 'splendor', type: 'spell', description:
+                    '<p>Вы кладёте руки на существо и направляете целительную магию, чтобы исцелить его увечья. Когда у вас есть несколько минут на уединение и концентрацию на цели, вы можете <strong>потратить 2 Надежды</strong>, чтобы очистить Рану или Стресс у цели.</p><p>Один раз до следующего продолжительного отдыха, когда вы потратите это время на исцеление, вы можете дополнительно очистить у цели ещё одну Рану или Стресс.</p>' } });
             const actor = { id: 'actor', type: 'character', items, system: {}, getRollData: () => ({ prof: 3 }) };
             items.forEach(item => { item.actor = actor; });
             items[0].system.getEnrichedDescription = async config => {
                 if (config.gmNotes !== false || config.type !== 'embed') throw Error('Incorrect enrichment options');
                 return '<p><strong>Острое:</strong> Добавляет урон.</p>';
+            };
+            items[2].system.getEnrichedDescription = async () => {
+                await new Promise(resolve => setTimeout(resolve, 25));
+                return items[2].system.description + '<p><strong>Дополнительное правило:</strong> в конце хода восстановите Надежду.</p>';
             };
             window.canvas = { tokens: { controlled: [{ actor }] } };
             window.systemBefore = getComputedStyle(document.querySelector('#system-card')).width;
@@ -84,7 +92,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
         await page.evaluate(() => document.fonts.ready);
         assert.equal(await page.locator('.damage-formula').innerText(), '3d8 + 2');
         assert.match(await page.locator('[data-item-id="weapon"] [data-card-description]').innerText(), /Острое/);
-        assert.equal(await page.locator('.dhc-recall-text').innerText(), '0');
+        assert.equal(await page.locator('[data-item-id="domain"] .dhc-recall-text').innerText(), '0');
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#system-card')).width), await page.evaluate(() => window.systemBefore));
         assert.equal(await page.locator('#daggerheart-hand .dh-card').count(), 0);
 
@@ -122,13 +130,36 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
             await page.evaluate(template => { settings.cardTemplate = template; manager.rebuildPanel(); }, template);
             await page.waitForSelector('.dh-hand-card');
             const text = page.locator('[data-item-id="long"] [data-card-description]');
-            await text.focus();
+            await page.locator('[data-item-id="long"]').focus();
             await page.waitForFunction(() => document.querySelector('[data-item-id="long"] .dh-card-scaler').getBoundingClientRect().height > 485);
-            assert.equal(await text.evaluate(el => getComputedStyle(el).overflowY), 'auto');
-            assert.ok(await text.evaluate(el => el.scrollHeight > el.clientHeight && el.clientHeight > 30));
-            await text.evaluate(el => { el.scrollTop = 100; });
-            assert.ok(await text.evaluate(el => el.scrollTop > 0));
+            assert.equal(await text.evaluate(el => getComputedStyle(el).overflowY), 'hidden');
+            assert.ok(await text.evaluate(el => el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth));
+            assert.ok(await text.evaluate(el => parseFloat(getComputedStyle(el).fontSize) < 14));
+            const healing = page.locator('[data-item-id="healing"] [data-card-description]');
+            assert.ok(await healing.evaluate(el => el.scrollHeight <= el.clientHeight && el.scrollWidth <= el.clientWidth));
+            assert.ok(await healing.evaluate(el => parseFloat(getComputedStyle(el).fontSize) >= 9));
+            const divider = page.locator('[data-item-id="long"] .dhc-strip-wrap, [data-item-id="long"] .divider-container');
+            const cardBounds = await page.locator('[data-item-id="long"] .dh-card-scaler').boundingBox();
+            const dividerBounds = await divider.boundingBox();
+            assert.ok(Math.abs(cardBounds.x - dividerBounds.x) < 1 && Math.abs(cardBounds.width - dividerBounds.width) < 1, 'divider spans the entire card');
             await page.screenshot({ path: path.join(os.tmpdir(), `daggerheart-hand-${template}-long.png`) });
+
+            // Drag from rules text, including a nested <strong>, without selecting it.
+            await page.evaluate(() => { manager.useItem = item => { window.playedItem = item.id; }; window.playedItem = null; });
+            const textBounds = await text.locator('strong').first().boundingBox();
+            const x = textBounds.x + textBounds.width / 2;
+            const y = textBounds.y + textBounds.height / 2;
+            await page.mouse.move(x, y);
+            await page.mouse.down();
+            assert.ok(await page.locator('[data-item-id="long"]').evaluate(el => el.classList.contains('dragging')));
+            await page.mouse.move(x + 10, y - 125, { steps: 5 });
+            assert.equal(await page.evaluate(() => getSelection().toString()), '');
+            await page.mouse.up();
+            assert.equal(await page.evaluate(() => window.playedItem), 'long');
+            await page.mouse.move(1200, 50);
+            await page.locator('[data-item-id="healing"]').focus();
+            await page.waitForFunction(() => document.querySelector('[data-item-id="healing"] .dh-card-scaler').getBoundingClientRect().height > 485);
+            await page.screenshot({ path: path.join(os.tmpdir(), `daggerheart-hand-${template}-healing.png`) });
         }
         await page.evaluate(() => { settings.handScale = 2; settings.expandedHandHeightPx = 500; manager.applyStyles(); });
         await page.waitForFunction(() => document.querySelector('.hand-wrapper').getBoundingClientRect().width <= innerWidth);

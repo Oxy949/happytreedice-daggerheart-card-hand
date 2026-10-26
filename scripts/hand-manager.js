@@ -1,5 +1,6 @@
 import { SmoothDnD, CardSmoothDnD } from './dnd.js';
 import { MODULE_ID, getTemplate, getTemplateChoices } from './registry.js';
+import { fitCardText } from './card-text.js';
 
 /**
  * Daggerheart Card Hand Manager
@@ -599,7 +600,10 @@ export class HandManager {
             this._panel.classList.add('collapsed');
         } else {
             this._panel.classList.remove('collapsed');
-            this._fadeIn(this._container, () => this.applyCardFanLayout());
+            this._fadeIn(this._container, () => {
+                this.fitCardDescriptions();
+                this.applyCardFanLayout();
+            });
             this._fadeIn(bg);
         }
     }
@@ -882,11 +886,18 @@ export class HandManager {
             });
 
             container.replaceChildren(fragment);
+            this.fitCardDescriptions();
+            document.fonts?.ready.then(() => this.fitCardDescriptions());
             this.applyCardFanLayout();
             // Reset/show hand and start auto-hide timer after rendering
             this.showHandByY();
             this.startAutoHideTimer();
         });
+    }
+
+    static fitCardDescriptions() {
+        if (!this._container) return;
+        for (const card of this._container.children) fitCardText(card);
     }
 
     /**
@@ -910,12 +921,14 @@ export class HandManager {
         });
 
         const description = el.querySelector('[data-card-description]');
-        if (description) description.tabIndex = 0;
         if (description && typeof item.system?.getEnrichedDescription === 'function') {
             // Let the installed system supply weapon features and resolve its enrichers.
             Promise.resolve().then(() => item.system.getEnrichedDescription({ type: 'embed', gmNotes: false }))
                 .then(html => {
-                    if (el.isConnected && typeof html === 'string') description.innerHTML = html;
+                    if (el.isConnected && typeof html === 'string') {
+                        description.innerHTML = html;
+                        fitCardText(el);
+                    }
                 })
                 .catch(error => console.warn(`${this.MODULE_NAME} | Failed to enrich ${item.name}`, error));
         }

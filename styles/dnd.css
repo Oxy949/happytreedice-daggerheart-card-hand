@@ -248,16 +248,24 @@ body.dragging-active {
 }
 
 #daggerheart-hand [data-card-description] {
-    user-select: text;
-    cursor: auto;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+    touch-action: none;
 }
 
 #daggerheart-hand [data-card-description] p {
-    margin: 0 0 0.45em;
+    margin: 0 0 0.35em;
 }
 
 #daggerheart-hand [data-card-description] p:last-child {
     margin-bottom: 0;
+}
+
+#daggerheart-hand [data-card-description] :is(h1, h2, h3, h4, h5, h6) {
+    font-size: 1.1em;
+    line-height: 1.15;
+    margin: 0 0 0.35em;
 }
 
 #daggerheart-hand.hidden {

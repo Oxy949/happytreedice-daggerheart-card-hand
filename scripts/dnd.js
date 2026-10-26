@@ -141,7 +141,8 @@ export class CardSmoothDnD {
 
     onDragStart(e) {
         if (e.type === 'mousedown' && e.button !== 0) return;
-        if (e.target?.closest('a, button, input, select, textarea, [data-card-description]')) return;
+        if (e.target?.closest('a, button, input, select, textarea')) return;
+        e.preventDefault();
 
         this.isDragging = true;
         if (this._rafId != null) {

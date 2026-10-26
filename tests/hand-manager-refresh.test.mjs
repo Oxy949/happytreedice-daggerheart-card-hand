@@ -26,6 +26,7 @@ function setup() {
         static escapeHtml(value) { return value; }
         static createCardElement(item) { return structuredClone(item); }
         static applyCardFanLayout() {}
+        static fitCardDescriptions() {}
         static showHandByY() {}
         static startAutoHideTimer() {}
     }

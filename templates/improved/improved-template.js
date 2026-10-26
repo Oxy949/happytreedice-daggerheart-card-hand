@@ -203,7 +203,9 @@ const cssContent = `
   /* Make the divider/title layout flow with the text block (no absolute positioning that pins to the whole card) */
   #daggerheart-hand .dh-card-scaler .divider-container {
     position: relative;
-    width: 100%;
+    width: calc(100% + 40px);
+    margin: 0 -20px;
+    flex-shrink: 0;
     height: fit-content;
     display: flex;
     justify-content: center;
@@ -328,9 +330,7 @@ const cssContent = `
     line-height: 1.3;
     flex: 1;
     min-height: 0;
-    overflow: auto;
-    scrollbar-width: thin;
-    overscroll-behavior: contain;
+    overflow: hidden;
     max-width: 100%;
     word-break: break-word;
     font-size: 14px;
@@ -490,4 +490,4 @@ const ImprovedTemplate = {
     return html;
   }
 };
-registerTemplate(ImprovedTemplate);    const fontSize = 14;
+registerTemplate(ImprovedTemplate);
