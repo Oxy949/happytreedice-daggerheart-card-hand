@@ -16,6 +16,18 @@ function setup() {
     globalThis.foundry = { dice: { Roll: { replaceFormulaData: (formula, data) => formula.replace('@prof', data.prof) } } };
 }
 
+test('expanded height keeps its saved key and registers separate collapse and hover settings', () => {
+    setup();
+    const registered = new Map();
+    game.settings = { register: (_, key, config) => registered.set(key, config) };
+    HandManager.registerSettings();
+    assert.equal(registered.get('expandedHandHeightPx').default, 0);
+    assert.equal(registered.get('collapsedHandHeightPx').default, 24);
+    assert.equal(registered.get('cardHoverScale').default, 2.2);
+    assert.equal(registered.get('cardHoverScale').range.min, 1);
+    assert.equal(registered.get('collapsedHandHeightPx').scope, 'client');
+});
+
 test('damage supports 2.11 main, legacy iterable parts, and serialized parts', () => {
     setup();
     const part = { type: new Set(['physical']), value: { getFormula: () => '@prof' + 'd8 + 2' } };
@@ -73,11 +85,21 @@ test('restored center and a click without movement preserve position and vertica
     assert.equal(style.bottom, '120px');
 });
 
-test('auto-hide includes the configured lift and actual scaled panel height', () => {
+test('collapsing, opening and dragging share one visibility state', () => {
     class Manager extends HandManager {}
     Manager._activeCardDrags = 0;
-    Manager._panel = { style: { bottom: '120px' }, querySelector: () => ({ getBoundingClientRect: () => ({ height: 500 }) }) };
+    Manager._collapsedYOffset = 320;
+    Manager._panel = { classList: { toggle: (_, collapsed) => { Manager.collapsedClass = collapsed; } } };
     Manager.setPanelYOffset = y => { Manager.y = y; };
     Manager.hideHandByY();
-    assert.equal(Manager.y, 644);
+    assert.equal(Manager.y, 320);
+    assert.equal(Manager._isCollapsed, true);
+    assert.equal(Manager.collapsedClass, true);
+    Manager.showHandByY();
+    assert.equal(Manager.y, 0);
+    assert.equal(Manager._isCollapsed, false);
+    assert.equal(Manager.collapsedClass, false);
+    Manager._activeCardDrags = 1;
+    Manager.hideHandByY();
+    assert.equal(Manager._isCollapsed, false);
 });

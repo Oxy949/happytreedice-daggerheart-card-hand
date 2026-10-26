@@ -46,7 +46,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
                 'DAGGERHEART.GENERAL.range': 'Дистанция'
             };
             window.settings = { handEnabled: true, cardTemplate: 'default', handScale: 1, handWidthPx: 800,
-                bottom: 15, arcAngle: 0, expandedHandHeightPx: 0, autoHideSeconds: 0,
+                bottom: 15, arcAngle: 0, expandedHandHeightPx: 0, collapsedHandHeightPx: 24, cardHoverScale: 2.2, autoHideSeconds: 0,
                 showWeapons: true, showDomainCards: true, showFeatures: true, filterEquipped: true };
             window.game = {
                 settings: { get: (_, key) => settings[key] },
@@ -117,8 +117,27 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
         await page.evaluate(() => { settings.expandedHandHeightPx = 120; manager.applyStyles(); });
         const lifted = await page.locator('.hand-wrapper').boundingBox();
         assert.ok(Math.abs(lifted.y - restored.y + 120) < 1, 'height setting raises the entire hand');
-        await page.evaluate(() => manager.hideHandByY());
-        await page.waitForFunction(() => document.querySelector('.hand-wrapper').getBoundingClientRect().top > innerHeight);
+        await page.evaluate(() => { settings.collapsedHandHeightPx = 40; manager.applyStyles(); manager.hideHandByY(); });
+        await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="weapon"] .dh-card-scaler').getBoundingClientRect().top - innerHeight + 40) < 1);
+        assert.equal(await page.evaluate(() => manager._isCollapsed), true);
+        await page.evaluate(() => { settings.expandedHandHeightPx = 200; manager.applyStyles(); });
+        await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="weapon"] .dh-card-scaler').getBoundingClientRect().top - innerHeight + 40) < 1);
+        await page.evaluate(() => { settings.collapsedHandHeightPx = 72; manager.applyStyles(); manager.refreshHand(); });
+        await page.waitForFunction(() => manager._isCollapsed && Math.abs(document.querySelector('[data-item-id="weapon"] .dh-card-scaler').getBoundingClientRect().top - innerHeight + 72) < 1);
+        await page.screenshot({ path: path.join(os.tmpdir(), 'daggerheart-hand-collapsed.png') });
+        const collapsedCard = await page.locator('[data-item-id="weapon"]').boundingBox();
+        await page.mouse.move(collapsedCard.x + collapsedCard.width / 2, 790);
+        await page.waitForFunction(() => !manager._isCollapsed && Math.abs(document.querySelector('.hand-wrapper').getBoundingClientRect().y - 349) < 1);
+        await page.mouse.move(1200, 50);
+        await page.evaluate(() => { settings.collapsedHandHeightPx = 0; manager.applyStyles(); manager.toggleHand(); });
+        await page.waitForFunction(() => manager._isCollapsed && Math.abs(document.querySelector('[data-item-id="weapon"] .dh-card-scaler').getBoundingClientRect().top - innerHeight) < 1);
+        await page.mouse.move(collapsedCard.x + collapsedCard.width / 2, 796);
+        await page.waitForFunction(() => !manager._isCollapsed);
+        await page.mouse.move(1200, 50);
+        await page.evaluate(() => { settings.collapsedHandHeightPx = 24; settings.autoHideSeconds = 0.05; manager.applyStyles(); manager.startAutoHideTimer(); });
+        await page.waitForFunction(() => manager._isCollapsed);
+        await page.evaluate(() => { settings.autoHideSeconds = 0; manager.toggleHand(); });
+        assert.equal(await page.evaluate(() => manager._isCollapsed), false);
         await page.evaluate(() => { settings.expandedHandHeightPx = 0; manager.applyStyles(); manager.showHandByY(); });
         await page.locator('[data-item-id="domain"]').focus();
         await page.waitForFunction(() => document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect().height > 485);
@@ -129,6 +148,16 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
         for (const template of ['default', 'improved']) {
             await page.evaluate(template => { settings.cardTemplate = template; manager.rebuildPanel(); }, template);
             await page.waitForSelector('.dh-hand-card');
+            await page.locator('[data-item-id="domain"]').focus();
+            await page.evaluate(() => { settings.cardHoverScale = 1; manager.applyStyles(); });
+            await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect().height - 224) < 1);
+            await page.evaluate(() => { settings.cardHoverScale = 1.5; manager.applyStyles(); });
+            await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect().height - 336) < 1);
+            await page.evaluate(() => { settings.handScale = 1.5; manager.applyStyles(); });
+            await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect().height - 504) < 1);
+            await page.evaluate(() => { settings.handScale = 1; settings.expandedHandHeightPx = 200; settings.cardHoverScale = 4; manager.applyStyles(); });
+            await page.waitForFunction(() => { const box = document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect(); return box.y >= 19 && box.height > 500 && box.height < 550; });
+            await page.evaluate(() => { settings.expandedHandHeightPx = 0; settings.cardHoverScale = 2.2; manager.applyStyles(); });
             const text = page.locator('[data-item-id="long"] [data-card-description]');
             await page.locator('[data-item-id="long"]').focus();
             await page.waitForFunction(() => document.querySelector('[data-item-id="long"] .dh-card-scaler').getBoundingClientRect().height > 485);

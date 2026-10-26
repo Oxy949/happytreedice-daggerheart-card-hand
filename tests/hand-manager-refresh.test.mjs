@@ -27,6 +27,7 @@ function setup() {
         static createCardElement(item) { return structuredClone(item); }
         static applyCardFanLayout() {}
         static fitCardDescriptions() {}
+        static applyHandPosition() {}
         static showHandByY() {}
         static startAutoHideTimer() {}
     }

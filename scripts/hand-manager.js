@@ -18,6 +18,8 @@ export class HandManager {
     static SETTING_SCALE = 'handScale';
     static SETTING_WIDTH = 'handWidthPx';
     static SETTING_HEIGHT = 'expandedHandHeightPx';
+    static SETTING_COLLAPSED_HEIGHT = 'collapsedHandHeightPx';
+    static SETTING_HOVER_SCALE = 'cardHoverScale';
     static SETTING_BOTTOM = 'bottom';
     static SETTING_SHOW_WEAPONS = 'showWeapons';
     static SETTING_SHOW_DOMAIN_CARDS = 'showDomainCards';
@@ -28,6 +30,7 @@ export class HandManager {
 
     static _currentActor = null;
     static _isCollapsed = false;
+    static _collapsedYOffset = 0;
     static _dndInstance = null;
     static _activeTemplateId = null;
 
@@ -55,6 +58,8 @@ export class HandManager {
                 [this.SETTING_SCALE]: 1.0,
                 [this.SETTING_WIDTH]: 800,
                 [this.SETTING_HEIGHT]: 0,
+                [this.SETTING_COLLAPSED_HEIGHT]: 24,
+                [this.SETTING_HOVER_SCALE]: 2.2,
                 [this.SETTING_BOTTOM]: 15,
                 [this.SETTING_HIDE_BACKGROUND]: false,
                 [this.SETTING_SHOW_WEAPONS]: true,
@@ -175,6 +180,28 @@ export class HandManager {
             type: Number,
             default: 0,
             range: { min: 0, max: 500, step: 1 },
+            onChange: () => this.applyStyles()
+        });
+
+        game.settings.register(this.MODULE_NAME, this.SETTING_COLLAPSED_HEIGHT, {
+            name: this.translate('SETTINGS.COLLAPSED_HEIGHT_NAME'),
+            hint: this.translate('SETTINGS.COLLAPSED_HEIGHT_HINT'),
+            scope: 'client',
+            config: true,
+            type: Number,
+            default: 24,
+            range: { min: 0, max: 400, step: 1 },
+            onChange: () => this.applyStyles()
+        });
+
+        game.settings.register(this.MODULE_NAME, this.SETTING_HOVER_SCALE, {
+            name: this.translate('SETTINGS.HOVER_SCALE_NAME'),
+            hint: this.translate('SETTINGS.HOVER_SCALE_HINT'),
+            scope: 'client',
+            config: true,
+            type: Number,
+            default: 2.2,
+            range: { min: 1, max: 4, step: 0.1 },
             onChange: () => this.applyStyles()
         });
 
@@ -569,6 +596,7 @@ export class HandManager {
             this.savePosition(newLeft);
         });
         this.restorePosition();
+        this.applyHandPosition();
 
         // Setup auto-hide behavior (hover to show, timeout to hide)
         this.setupAutoHideHandlers();
@@ -590,35 +618,19 @@ export class HandManager {
 
     static toggleHand() {
         if (!this._panel) return;
-
-        this._isCollapsed = !this._isCollapsed;
-        const bg = this._panel.querySelector('.hand-background-plate');
-
+        this.clearAutoHideTimer();
         if (this._isCollapsed) {
-            this._fadeOut(this._container);
-            this._fadeOut(bg);
-            this._panel.classList.add('collapsed');
+            this.showHandByY();
+            this.startAutoHideTimer();
         } else {
-            this._panel.classList.remove('collapsed');
-            this._fadeIn(this._container, () => {
-                this.fitCardDescriptions();
-                this.applyCardFanLayout();
-            });
-            this._fadeIn(bg);
+            this.hideHandByY();
         }
     }
 
-    static _fadeOut(el, duration = 200) {
-        if (!el) return;
-        const anim = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration, fill: 'forwards' });
-        anim.onfinish = () => { el.style.display = 'none'; anim.cancel(); el.style.opacity = ''; };
-    }
-
-    static _fadeIn(el, callback, duration = 200) {
-        if (!el) return;
-        el.style.display = '';
-        const anim = el.animate([{ opacity: 0 }, { opacity: 1 }], { duration });
-        anim.onfinish = () => { callback?.(); };
+    static applyHandPosition() {
+        if (!this._panel) return;
+        this._panel.classList.toggle('collapsed', this._isCollapsed);
+        this.setPanelYOffset(this._isCollapsed ? this._collapsedYOffset : 0);
     }
 
     static applyStyles() {
@@ -641,6 +653,8 @@ export class HandManager {
         const bottom = Number(this.getSetting(this.SETTING_BOTTOM)) || 0;
         const lift = Math.max(0, Math.min(500, Number(this.getSetting(this.SETTING_HEIGHT)) || 0,
             window.innerHeight - scale * (height + bottom + 20)));
+        const collapsedHeight = Math.max(0, Math.min(400, Number(this.getSetting(this.SETTING_COLLAPSED_HEIGHT) ?? 24)));
+        this._collapsedYOffset = Math.max(0, lift + scale * (height + bottom) - collapsedHeight);
         this._panel.style.bottom = `${lift}px`;
         const wrapper = this._panel.querySelector('.hand-wrapper');
 
@@ -649,7 +663,11 @@ export class HandManager {
         this._panel.style.setProperty('--dh-hand-card-height', `${height}px`);
         this._panel.style.setProperty('--dh-hand-card-width', `${height * 5 / 7}px`);
         this._panel.style.setProperty('--dh-hand-card-scale', height / 490);
-        this._panel.style.setProperty('--dh-preview-scale', Math.max(height / 490, Math.min(1, ((window.innerHeight - lift) / scale - bottom - 40) / 490)));
+        const hoverMultiplier = Math.max(1, Math.min(4, Number(this.getSetting(this.SETTING_HOVER_SCALE)) || 2.2));
+        const previewLift = hoverMultiplier > 1 ? 20 : 0;
+        const maxPreviewScale = ((window.innerHeight - lift) / scale - bottom - previewLift - 20) / 490;
+        this._panel.style.setProperty('--dh-preview-scale', Math.max(height / 490, Math.min(height / 490 * hoverMultiplier, maxPreviewScale)));
+        this._panel.style.setProperty('--dh-preview-lift', `${previewLift}px`);
 
         if (wrapper) {
             wrapper.style.transform = `scale(${scale})`;
@@ -659,6 +677,7 @@ export class HandManager {
         }
 
         this.applyCardFanLayout();
+        this.applyHandPosition();
     }
 
     static async savePosition(left) {
@@ -727,7 +746,7 @@ export class HandManager {
     static startAutoHideTimer() {
         this.clearAutoHideTimer();
         const secs = Number(this.getSetting(this.SETTING_AUTOHIDE)) || 0;
-        if (!this._panel || secs <= 0 || this._activeCardDrags > 0 || this._panel.contains(document.activeElement)) return;
+        if (!this._panel || this._isCollapsed || secs <= 0 || this._activeCardDrags > 0 || this._panel.contains(document.activeElement)) return;
 
         this._autoHideTimer = setTimeout(() => {
             if (this._activeCardDrags > 0) return;
@@ -759,20 +778,15 @@ export class HandManager {
     }
 
     static showHandByY() {
-        this.setPanelYOffset(0);
+        this._isCollapsed = false;
+        this.applyHandPosition();
     }
 
     static hideHandByY() {
-        const wrapper = this._panel?.querySelector('.hand-wrapper');
-        if (!wrapper) return;
+        if (!this._panel) return;
         if (this._activeCardDrags > 0) return;
-
-        const wrapperHeight = wrapper.getBoundingClientRect().height || 250;
-        // Move the panel down by (wrapperHeight + extra) so cards are off-screen vertically
-        const extra = 24;
-        const lift = parseFloat(this._panel.style.bottom) || 0;
-        const y = wrapperHeight + lift + extra;
-        this.setPanelYOffset(y);
+        this._isCollapsed = true;
+        this.applyHandPosition();
     }
 
     static pauseAutoHideForCardDrag() {
@@ -889,8 +903,8 @@ export class HandManager {
             this.fitCardDescriptions();
             document.fonts?.ready.then(() => this.fitCardDescriptions());
             this.applyCardFanLayout();
-            // Reset/show hand and start auto-hide timer after rendering
-            this.showHandByY();
+            // Item updates preserve whether the user has opened or collapsed the hand.
+            this.applyHandPosition();
             this.startAutoHideTimer();
         });
     }

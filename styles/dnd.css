@@ -188,14 +188,14 @@ body.dragging-active {
     overflow: hidden;
 }
 
-#daggerheart-hand .dh-hand-card:hover,
-#daggerheart-hand .dh-hand-card:focus-within {
+#daggerheart-hand:not(.collapsed) .dh-hand-card:hover,
+#daggerheart-hand:not(.collapsed) .dh-hand-card:focus-within {
     z-index: 1000 !important;
 }
 
-#daggerheart-hand .dh-hand-card:hover .dh-card-scaler,
-#daggerheart-hand .dh-hand-card:focus-within .dh-card-scaler {
-    transform: translateY(-20px) scale(var(--dh-preview-scale, 1));
+#daggerheart-hand:not(.collapsed) .dh-hand-card:hover .dh-card-scaler,
+#daggerheart-hand:not(.collapsed) .dh-hand-card:focus-within .dh-card-scaler {
+    transform: translateY(calc(-1 * var(--dh-preview-lift, 20px))) scale(var(--dh-preview-scale, 1));
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
     border-color: #afb0d9;
 }
@@ -270,10 +270,6 @@ body.dragging-active {
 
 #daggerheart-hand.hidden {
     display: none !important;
-}
-
-#daggerheart-hand.collapsed .hand-wrapper {
-    height: 0 !important;
 }
 
 #daggerheart-hand.collapsed .hand-background-plate {
