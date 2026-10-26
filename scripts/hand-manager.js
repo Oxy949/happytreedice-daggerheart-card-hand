@@ -21,6 +21,7 @@ export class HandManager {
     static SETTING_COLLAPSED_HEIGHT = 'collapsedHandHeightPx';
     static SETTING_HOVER_SCALE = 'cardHoverScale';
     static SETTING_BOTTOM = 'bottom';
+    static SETTING_LAYOUT_VERSION = 'layoutSettingsVersion';
     static SETTING_SHOW_WEAPONS = 'showWeapons';
     static SETTING_SHOW_DOMAIN_CARDS = 'showDomainCards';
     static SETTING_SHOW_FEATURES = 'showFeatures';
@@ -61,6 +62,7 @@ export class HandManager {
                 [this.SETTING_COLLAPSED_HEIGHT]: 24,
                 [this.SETTING_HOVER_SCALE]: 2.2,
                 [this.SETTING_BOTTOM]: 15,
+                [this.SETTING_LAYOUT_VERSION]: 0,
                 [this.SETTING_HIDE_BACKGROUND]: false,
                 [this.SETTING_SHOW_WEAPONS]: true,
                 [this.SETTING_SHOW_DOMAIN_CARDS]: true,
@@ -140,11 +142,14 @@ export class HandManager {
             name: this.translate("SETTINGS.BOTTOM_NAME"),
             hint: this.translate("SETTINGS.BOTTOM_HINT"),
             scope: "client",
-            config: true,
+            config: false,
             type: Number,
             default: 15,
-            range: { min: 0, max: 400, step: 1 },
-            onChange: () => this.applyStyles()
+            range: { min: 0, max: 400, step: 1 }
+        });
+
+        game.settings.register(this.MODULE_NAME, this.SETTING_LAYOUT_VERSION, {
+            scope: 'client', config: false, type: Number, default: 0
         });
 
         game.settings.register(this.MODULE_NAME, this.SETTING_AUTOHIDE, {
@@ -179,7 +184,7 @@ export class HandManager {
             config: true,
             type: Number,
             default: 0,
-            range: { min: 0, max: 500, step: 1 },
+            range: { min: 0, max: 1500, step: 1 },
             onChange: () => this.applyStyles()
         });
 
@@ -230,6 +235,16 @@ export class HandManager {
         return game.i18n.localize(key);
     }
 
+    /** Fold the legacy inner padding into the single expanded-hand position. */
+    static async migrateLayoutSettings() {
+        if (Number(this.getSetting(this.SETTING_LAYOUT_VERSION)) >= 1) return;
+        const scale = Number(this.getSetting(this.SETTING_SCALE)) || 1;
+        const padding = Number(this.getSetting(this.SETTING_BOTTOM) ?? 15);
+        const lift = Number(this.getSetting(this.SETTING_HEIGHT)) || 0;
+        await game.settings.set(this.MODULE_NAME, this.SETTING_HEIGHT, Math.max(0, Math.round(lift + padding * scale)));
+        await game.settings.set(this.MODULE_NAME, this.SETTING_LAYOUT_VERSION, 1);
+    }
+
     static getHandActor() {
         const controlled = canvas.tokens?.controlled || [];
         if (controlled.length > 0) return controlled[0]?.actor || null;
@@ -274,9 +289,12 @@ export class HandManager {
 
     static _getDamageFormula(item) {
         const parts = this._getDamageParts(item);
-
-        const RollCls = globalThis.foundry?.dice?.Roll ?? globalThis.Roll;
-        const rollData = item.system?.getRollData?.() ?? item.actor?.getRollData?.() ?? {};
+        const attack = item.system?.attack;
+        const rollData = attack?.getRollData?.() ?? item.getRollData?.()
+            ?? item.system?.getRollData?.() ?? item.actor?.getRollData?.() ?? {};
+        if (typeof attack?.getDamageFormula === 'function') {
+            return this._resolveDamageFormula(attack.getDamageFormula(), item, rollData);
+        }
         const formulas = [];
 
         // parts is an IterableTypedObjectField in Foundryborne (iterable of DHDamageData)
@@ -296,13 +314,34 @@ export class HandManager {
                 formula = `${multiplier ?? 1}${value.dice}${bonus}`;
             }
 
-            if (RollCls?.replaceFormulaData) {
-                formula = RollCls.replaceFormulaData(formula, rollData);
-            }
-            formulas.push(formula);
+            formulas.push(this._resolveDamageFormula(formula, item, rollData));
         }
 
         return formulas.join(" + ");
+    }
+
+    static _resolveDamageFormula(formula, item, rollData) {
+        const data = { ...rollData };
+        data.prof ??= item.actor?.system?.proficiency ?? 1;
+        data.cast ??= item.actor?.system?.spellcastModifier ?? 1;
+        data.tier ??= item.actor?.system?.tier ?? 1;
+        data.scale ??= 1;
+        data.result ??= 1;
+
+        // Native Foundry reads @profd8 as one variable; DH writes @prof directly before dice.
+        const replaceMultipliers = value => String(value ?? '').replace(
+            /@\{(prof|cast|tier|scale|result)\}|@(prof|cast|tier|scale|result)(?=d\d+|[^\w.]|$)/g,
+            (_, braced, plain) => String(data[braced ?? plain])
+        );
+        formula = replaceMultipliers(formula);
+        const BaseRoll = globalThis.foundry?.dice?.Roll ?? globalThis.Roll;
+        const RollCls = BaseRoll?.defaultImplementation ?? BaseRoll;
+        for (let depth = 0; depth < 3 && formula.includes('@') && RollCls?.replaceFormulaData; depth += 1) {
+            const resolved = replaceMultipliers(RollCls.replaceFormulaData(formula, data, { recursive: true }));
+            if (resolved === formula) break;
+            formula = resolved;
+        }
+        return formula;
     }
 
     static _getDamageLabels(item) {
@@ -650,15 +689,15 @@ export class HandManager {
         const scale = Number(this.getSetting(this.SETTING_SCALE)) || 1;
         const width = Math.min(Math.max(600, this.getSetting(this.SETTING_WIDTH)), (window.innerWidth - 32) / scale);
         const height = 224;
-        const bottom = Number(this.getSetting(this.SETTING_BOTTOM)) || 0;
-        const lift = Math.max(0, Math.min(500, Number(this.getSetting(this.SETTING_HEIGHT)) || 0,
+        const bottom = 0;
+        const lift = Math.max(0, Math.min(1500, Number(this.getSetting(this.SETTING_HEIGHT)) || 0,
             window.innerHeight - scale * (height + bottom + 20)));
         const collapsedHeight = Math.max(0, Math.min(400, Number(this.getSetting(this.SETTING_COLLAPSED_HEIGHT) ?? 24)));
         this._collapsedYOffset = Math.max(0, lift + scale * (height + bottom) - collapsedHeight);
         this._panel.style.bottom = `${lift}px`;
         const wrapper = this._panel.querySelector('.hand-wrapper');
 
-        // Apply configurable bottom padding for the cards container
+        // Legacy inner padding is now part of the expanded-hand height.
         if (this._container) this._container.style.paddingBottom = `${bottom}px`;
         this._panel.style.setProperty('--dh-hand-card-height', `${height}px`);
         this._panel.style.setProperty('--dh-hand-card-width', `${height * 5 / 7}px`);

@@ -15,7 +15,8 @@ export function registerHooks() {
         HandManager.registerSettings();
     });
 
-    Hooks.once('ready', () => {
+    Hooks.once('ready', async () => {
+        await HandManager.migrateLayoutSettings();
         HandManager.createHandPanel();
         setupRuntimeHooks();
 

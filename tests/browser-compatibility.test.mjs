@@ -49,12 +49,15 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
                 bottom: 15, arcAngle: 0, expandedHandHeightPx: 0, collapsedHandHeightPx: 24, cardHoverScale: 2.2, autoHideSeconds: 0,
                 showWeapons: true, showDomainCards: true, showFeatures: true, filterEquipped: true };
             window.game = {
-                settings: { get: (_, key) => settings[key] },
+                settings: { get: (_, key) => settings[key], set: async (_, key, value) => { settings[key] = value; } },
                 i18n: { has: () => true, localize: key => translations[key] ?? key },
                 modules: { get: () => ({ active: true }) },
                 user: { getFlag: () => ({ left: window.savedLeft ?? 640 }), setFlag: async (_, key, data) => { window.savedLeft = data.left; } }
             };
-            window.foundry = { dice: { Roll: { replaceFormulaData: (formula, data) => formula.replace('@prof', data.prof) } } };
+            window.foundry = { dice: { Roll: { replaceFormulaData: (formula, data) => formula.replace(
+                /@\{([-.\w]+)\}|@([-.\w]+)/g,
+                (match, braced, plain) => String((braced ?? plain).split('.').reduce((value, key) => value?.[key], data) ?? match)
+            ) } } };
             window.CONFIG = { DH: { GENERAL: { damageTypes: { physical: { label: 'Физический' } } },
                 ITEM: { allWeaponFeatures: () => ({ sharp: { label: 'Острое', description: 'Добавляет урон.' } }) } } };
             const img = '/systems/daggerheart/assets/icons/domains/domain-card/blade.png';
@@ -70,7 +73,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
             items.push({ id: 'healing', name: 'Исцеляющее касание', type: 'domainCard', img,
                 system: { level: 1, recallCost: 1, domain: 'splendor', type: 'spell', description:
                     '<p>Вы кладёте руки на существо и направляете целительную магию, чтобы исцелить его увечья. Когда у вас есть несколько минут на уединение и концентрацию на цели, вы можете <strong>потратить 2 Надежды</strong>, чтобы очистить Рану или Стресс у цели.</p><p>Один раз до следующего продолжительного отдыха, когда вы потратите это время на исцеление, вы можете дополнительно очистить у цели ещё одну Рану или Стресс.</p>' } });
-            const actor = { id: 'actor', type: 'character', items, system: {}, getRollData: () => ({ prof: 3 }) };
+            const actor = { id: 'actor', type: 'character', items, system: { proficiency: 3 }, getRollData: () => ({}) };
             items.forEach(item => { item.actor = actor; });
             items[0].system.getEnrichedDescription = async config => {
                 if (config.gmNotes !== false || config.type !== 'embed') throw Error('Incorrect enrichment options');
@@ -86,11 +89,16 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
             await import('/modules/hand/templates/default/default-template.js');
             await import('/modules/hand/templates/improved/improved-template.js');
             window.manager = HandManager;
+            await manager.migrateLayoutSettings();
             manager.refreshHand();
         });
         await page.waitForSelector('.dh-hand-card');
         await page.evaluate(() => document.fonts.ready);
         assert.equal(await page.locator('.damage-formula').innerText(), '3d8 + 2');
+        await page.evaluate(() => { canvas.tokens.controlled[0].actor.system.proficiency = 4; manager.refreshHand(); });
+        await page.waitForFunction(() => document.querySelector('.damage-formula')?.textContent === '4d8 + 2');
+        await page.evaluate(() => { canvas.tokens.controlled[0].actor.system.proficiency = 3; manager.refreshHand(); });
+        await page.waitForFunction(() => document.querySelector('.damage-formula')?.textContent === '3d8 + 2');
         assert.match(await page.locator('[data-item-id="weapon"] [data-card-description]').innerText(), /Острое/);
         assert.equal(await page.locator('[data-item-id="domain"] .dhc-recall-text').innerText(), '0');
         assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#system-card')).width), await page.evaluate(() => window.systemBefore));
@@ -116,7 +124,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
 
         await page.evaluate(() => { settings.expandedHandHeightPx = 120; manager.applyStyles(); });
         const lifted = await page.locator('.hand-wrapper').boundingBox();
-        assert.ok(Math.abs(lifted.y - restored.y + 120) < 1, 'height setting raises the entire hand');
+        assert.ok(Math.abs(lifted.y - restored.y + 120 - 15) < 1, 'height setting raises the entire hand from its migrated 15px default');
         await page.evaluate(() => { settings.collapsedHandHeightPx = 40; manager.applyStyles(); manager.hideHandByY(); });
         await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="weapon"] .dh-card-scaler').getBoundingClientRect().top - innerHeight + 40) < 1);
         assert.equal(await page.evaluate(() => manager._isCollapsed), true);
@@ -127,7 +135,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
         await page.screenshot({ path: path.join(os.tmpdir(), 'daggerheart-hand-collapsed.png') });
         const collapsedCard = await page.locator('[data-item-id="weapon"]').boundingBox();
         await page.mouse.move(collapsedCard.x + collapsedCard.width / 2, 790);
-        await page.waitForFunction(() => !manager._isCollapsed && Math.abs(document.querySelector('.hand-wrapper').getBoundingClientRect().y - 349) < 1);
+        await page.waitForFunction(() => !manager._isCollapsed && Math.abs(document.querySelector('.hand-wrapper').getBoundingClientRect().y - 364) < 1);
         await page.mouse.move(1200, 50);
         await page.evaluate(() => { settings.collapsedHandHeightPx = 0; manager.applyStyles(); manager.toggleHand(); });
         await page.waitForFunction(() => manager._isCollapsed && Math.abs(document.querySelector('[data-item-id="weapon"] .dh-card-scaler').getBoundingClientRect().top - innerHeight) < 1);
@@ -156,7 +164,7 @@ test('both templates coexist with Daggerheart CSS and preserve hand interactions
             await page.evaluate(() => { settings.handScale = 1.5; manager.applyStyles(); });
             await page.waitForFunction(() => Math.abs(document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect().height - 504) < 1);
             await page.evaluate(() => { settings.handScale = 1; settings.expandedHandHeightPx = 200; settings.cardHoverScale = 4; manager.applyStyles(); });
-            await page.waitForFunction(() => { const box = document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect(); return box.y >= 19 && box.height > 500 && box.height < 550; });
+            await page.waitForFunction(() => { const box = document.querySelector('[data-item-id="domain"] .dh-card-scaler').getBoundingClientRect(); return box.y >= 19 && box.height > 550 && box.height < 565; });
             await page.evaluate(() => { settings.expandedHandHeightPx = 0; settings.cardHoverScale = 2.2; manager.applyStyles(); });
             const text = page.locator('[data-item-id="long"] [data-card-description]');
             await page.locator('[data-item-id="long"]').focus();

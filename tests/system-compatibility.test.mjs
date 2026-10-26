@@ -13,7 +13,11 @@ function setup() {
         GENERAL: { damageTypes: { physical: { label: 'Physical' }, magic: { label: 'Magic' } } },
         ITEM: { allWeaponFeatures: () => ({ sharp: { label: 'Sharp', description: 'Add damage.' } }) }
     } };
-    globalThis.foundry = { dice: { Roll: { replaceFormulaData: (formula, data) => formula.replace('@prof', data.prof) } } };
+    // Foundry 14 consumes @profd8 as one variable, not @prof followed by a die.
+    globalThis.foundry = { dice: { Roll: { replaceFormulaData: (formula, data) => formula.replace(
+        /@\{([-.\w]+)\}|@([-.\w]+)/g,
+        (match, braced, plain) => String((braced ?? plain).split('.').reduce((value, key) => value?.[key], data) ?? match)
+    ) } } };
 }
 
 test('expanded height keeps its saved key and registers separate collapse and hover settings', () => {
@@ -26,6 +30,31 @@ test('expanded height keeps its saved key and registers separate collapse and ho
     assert.equal(registered.get('cardHoverScale').default, 2.2);
     assert.equal(registered.get('cardHoverScale').range.min, 1);
     assert.equal(registered.get('collapsedHandHeightPx').scope, 'client');
+    assert.equal(registered.get('bottom').config, false);
+    assert.equal(registered.get('layoutSettingsVersion').config, false);
+});
+
+test('legacy padding migrates to expanded height once with the interface scale', async () => {
+    setup();
+    const settings = { expandedHandHeightPx: 120, bottom: 30, handScale: 1.5, layoutSettingsVersion: 0 };
+    game.settings = {
+        get: (_, key) => settings[key],
+        set: async (_, key, value) => { settings[key] = value; }
+    };
+    await HandManager.migrateLayoutSettings();
+    assert.equal(settings.expandedHandHeightPx, 165);
+    assert.equal(settings.layoutSettingsVersion, 1);
+    settings.handScale = 2;
+    await HandManager.migrateLayoutSettings();
+    assert.equal(settings.expandedHandHeightPx, 165);
+});
+
+test('zero legacy padding leaves expanded height unchanged', async () => {
+    setup();
+    const settings = { expandedHandHeightPx: 120, bottom: 0, handScale: 2, layoutSettingsVersion: 0 };
+    game.settings = { get: (_, key) => settings[key], set: async (_, key, value) => { settings[key] = value; } };
+    await HandManager.migrateLayoutSettings();
+    assert.equal(settings.expandedHandHeightPx, 120);
 });
 
 test('damage supports 2.11 main, legacy iterable parts, and serialized parts', () => {
@@ -43,6 +72,33 @@ test('raw damage supports custom formulas and negative bonuses', () => {
     const item = value => ({ system: { attack: { damage: { main: { value } } } } });
     assert.equal(HandManager._getDamageFormula(item({ custom: { enabled: true, formula: '2d12' } })), '2d12');
     assert.equal(HandManager._getDamageFormula(item({ multiplier: 'flat', flatMultiplier: 2, dice: 'd6', bonus: -3 })), '2d6 - 3');
+});
+
+test('adjacent proficiency dice resolve with native Foundry variable parsing and actor fallback', () => {
+    setup();
+    assert.equal(foundry.dice.Roll.replaceFormulaData('@profd8', { prof: 3 }), '@profd8');
+    const actor = { system: { proficiency: 3 }, getRollData: () => ({}) };
+    const item = { actor, system: { attack: { damage: { main: { value: { getFormula: () => '@profd8 + 2' } } } } } };
+    assert.equal(HandManager._getDamageFormula(item), '3d8 + 2');
+    actor.system.proficiency = 4;
+    assert.equal(HandManager._getDamageFormula(item), '4d8 + 2');
+    item.system.attack.damage.main.value.getFormula = () => '@profd8kh2 + 2';
+    assert.equal(HandManager._getDamageFormula(item), '4d8kh2 + 2');
+});
+
+test('system action formula and action roll data take precedence', () => {
+    setup();
+    const item = { actor: { system: { proficiency: 3 } }, getRollData: () => ({ prof: 4 }), system: { attack: {
+        getDamageFormula: () => '@profd10 + 2', getRollData: () => ({ prof: 5 })
+    } } };
+    assert.equal(HandManager._getDamageFormula(item), '5d10 + 2');
+});
+
+test('nested custom damage resolves proficiency after looking up item data', () => {
+    setup();
+    const item = { actor: { system: { proficiency: 3 } }, getRollData: () => ({ item: { damage: '@profd8 + 2' } }),
+        system: { attack: { damage: { main: { value: { custom: { enabled: true, formula: '@item.damage' } } } } } } };
+    assert.equal(HandManager._getDamageFormula(item), '3d8 + 2');
 });
 
 test('weapon descriptions include current and legacy configured features', () => {
