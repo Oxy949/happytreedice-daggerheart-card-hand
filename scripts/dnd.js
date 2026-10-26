@@ -36,10 +36,13 @@ export class SmoothDnD {
     onDragStart(e) {
         if (e.type === 'mousedown' && e.button !== 0) return;
         this.isDragging = true;
+        this.currentX = 0;
+        this._pendingDx = 0;
         this.startX = (e.type === 'touchstart') ? e.touches[0].clientX : e.clientX;
 
         const style = window.getComputedStyle(this.el);
         this.initialLeft = parseFloat(style.left) || 0;
+        e.preventDefault();
 
         this.el.classList.add('dragging');
         document.body.style.cursor = "grabbing";
@@ -82,10 +85,10 @@ export class SmoothDnD {
             this._rafId = null;
         }
 
-        let finalLeft = this.initialLeft + this.currentX;
-        const panelWidth = this.el.offsetWidth;
-        // Optimization: use window.innerWidth directly instead of querying if possible
-        const maxLeft = window.innerWidth - (panelWidth / 4);
+        // Store the panel's center consistently with restorePosition().
+        const clientX = e.type === 'touchend' ? e.changedTouches[0].clientX : e.clientX;
+        const dx = Number.isFinite(clientX) ? clientX - this.startX : this.currentX;
+        const finalLeft = Math.max(40, Math.min(window.innerWidth - 40, this.initialLeft + dx));
 
         this.el.style.left = `${finalLeft}px`;
         this.el.style.transform = `translateX(-50%)`;
@@ -138,6 +141,7 @@ export class CardSmoothDnD {
 
     onDragStart(e) {
         if (e.type === 'mousedown' && e.button !== 0) return;
+        if (e.target?.closest('a, button, input, select, textarea, [data-card-description]')) return;
 
         this.isDragging = true;
         if (this._rafId != null) {

@@ -17,6 +17,8 @@
             "FILTER_EQUIPPED_HINT": "Blendet Gegenstände aus, die nicht ausgerüstet sind.",
             "SCALE_NAME": "Oberflächenskalierung",
             "SCALE_HINT": "Größenmultiplikator des Moduls (0.5 - 2.0).",
+            "HEIGHT_NAME": "Höhe der aufgeklappten Kartenhand (px)",
+            "HEIGHT_HINT": "Abstand der aufgeklappten Kartenhand zum unteren Bildschirmrand in Pixeln. Beim automatischen Ausblenden verschwindet sie vollständig.",
             "WIDTH_NAME": "Panelbreite (px)",
             "WIDTH_HINT": "Feste Breite des Kartenpanels (min. 600).",
             "ENABLED_NAME": "Kartenhand aktivieren",

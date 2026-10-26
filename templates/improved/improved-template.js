@@ -40,8 +40,8 @@ const cssContent = `
     --dh-text: #f5f5f7;
     --dh-accent: #f2c24b;
 
-    --dh-font-header: "Modesto Condensed", "Signika", sans-serif;
-    --dh-font-body: "Signika", sans-serif;
+    --dh-font-header: var(--dh-font-description, 'Overpass'), 'Arial', sans-serif;
+    --dh-card-font-body: var(--dh-font-body, 'Montserrat'), 'Arial', sans-serif;
 
     position: fixed;
     bottom: 0;
@@ -60,7 +60,7 @@ const cssContent = `
     transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .hand-wrapper {
+  #daggerheart-hand .hand-wrapper {
     position: relative;
     height: 250px;
     pointer-events: all;
@@ -70,7 +70,7 @@ const cssContent = `
     align-items: flex-end;
   }
 
-  .hand-background-plate {
+  #daggerheart-hand .hand-background-plate {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -86,17 +86,17 @@ const cssContent = `
     pointer-events: all;
   }
 
-  .drag-handle-area {
+  #daggerheart-hand .drag-handle-area {
     width: 100%;
     height: 100%;
     cursor: grab;
   }
 
-  .drag-handle-area:active {
+  #daggerheart-hand .drag-handle-area:active {
     cursor: grabbing;
   }
 
-  .dh-cards-container {
+  #daggerheart-hand .dh-cards-container {
     position: relative;
     width: 100%;
     height: 100%;
@@ -109,7 +109,7 @@ const cssContent = `
     pointer-events: none;
   }
 
-  .damage-info {
+  #daggerheart-hand .damage-info {
     position: relative;
     z-index: 7;
     background: transparent;
@@ -130,18 +130,18 @@ const cssContent = `
     margin-top: 4px; /* Clear the title */
   }
 
-  .damage-info + .description {
+  #daggerheart-hand .damage-info + .description {
     margin-top: 0 !important;
   }
 
-  .damage-labels {
+  #daggerheart-hand .damage-labels {
     font-size: 15px;
     text-transform: uppercase;
     color: #666;
     letter-spacing: 0.5px;
     margin-top: 2px;
   }
-  .damage-range {
+  #daggerheart-hand .damage-range {
     font-size: 14px;
     color: #222;
     margin-top: 6px;
@@ -150,7 +150,7 @@ const cssContent = `
   /* Improved card layout styles (no global positioning override) */
 
   /* The card image is the background anchored to the top and fills width */
-  .dh-card-scaler .card-image-container {
+  #daggerheart-hand .dh-card-scaler .card-image-container {
     position: absolute;
     top: 0;
     left: 0;
@@ -162,7 +162,7 @@ const cssContent = `
     pointer-events: none;
   }
 
-  .dh-card-scaler .card-main-image {
+  #daggerheart-hand .dh-card-scaler .card-main-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -172,7 +172,7 @@ const cssContent = `
   }
 
   /* Text content is anchored to the bottom and will expand upwards, overlapping the image */
-  .dh-card-scaler .card-text-content {
+  #daggerheart-hand .dh-card-scaler .card-text-content {
     position: absolute;
     left: 0;
     right: 0;
@@ -190,16 +190,18 @@ const cssContent = `
     overflow: visible;
   }
 
-  .dh-card-scaler .card-text-content {
+  #daggerheart-hand .dh-card-scaler .card-text-content {
     justify-content: flex-start;
     padding-top: 0px; /* push title a bit down from the top of the text block */
     padding-bottom: 8px;
-    min-height: 184px;
-    max-height: 425px;
+    top: 51%;
+    min-height: 0;
+    max-height: none;
+    padding: 0 20px 16px;
   }
 
   /* Make the divider/title layout flow with the text block (no absolute positioning that pins to the whole card) */
-  .dh-card-scaler .divider-container {
+  #daggerheart-hand .dh-card-scaler .divider-container {
     position: relative;
     width: 100%;
     height: fit-content;
@@ -215,7 +217,7 @@ const cssContent = `
      image URL and the domain color. The pseudo-element (::before)
      renders the divider image above the color layer, so transparent
      parts of the image show the domain color beneath. */
-  .dh-card-scaler .title-bg {
+  #daggerheart-hand .dh-card-scaler .title-bg {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -228,7 +230,7 @@ const cssContent = `
     background: none;
   }
 
-  .dh-card-scaler .title-bg::before {
+  #daggerheart-hand .dh-card-scaler .title-bg::before {
     content: '';
     position: absolute;
     top: 0;
@@ -243,7 +245,7 @@ const cssContent = `
     pointer-events: none;
   }
 
-  .dh-card-scaler .title-bg-inner {
+  #daggerheart-hand .dh-card-scaler .title-bg-inner {
     position: absolute;
     top: 30%;
     left: 30%;
@@ -254,7 +256,7 @@ const cssContent = `
     z-index: 1; /* sits under the divider image */
   }
 
-  .dh-card-scaler .card-title {
+  #daggerheart-hand .dh-card-scaler .card-title {
     position: relative;
     top: 0;
     transform: none;
@@ -263,7 +265,7 @@ const cssContent = `
     font-family: var(--dh-font-header);
     font-weight: 800;
     text-transform: uppercase;
-    font-size: 24px;
+    font-size: 21px;
     padding-top: 2px;
     line-height: 1;
     text-align: center;
@@ -271,12 +273,13 @@ const cssContent = `
     text-shadow: none;
     margin: 0;
     z-index: 8;
-    white-space: nowrap;
+    white-space: normal;
+    flex-shrink: 0;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .dh-card-scaler .card-type {
+  #daggerheart-hand .dh-card-scaler .card-type {
     position: relative;
     top: 0;
     transform: none;
@@ -298,7 +301,7 @@ const cssContent = `
     text-overflow: ellipsis;
   }
 
-  .dh-card-scaler .domain-card-type {
+  #daggerheart-hand .dh-card-scaler .domain-card-type {
     position: relative;
     top: 0;
     transform: none;
@@ -319,31 +322,35 @@ const cssContent = `
     text-overflow: ellipsis;
   }
 
-  .dh-card-scaler .description {
+  #daggerheart-hand .dh-card-scaler .description {
     margin-top: 0px;
     color: #000;
     line-height: 1.3;
-    overflow: visible;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    scrollbar-width: thin;
+    overscroll-behavior: contain;
     max-width: 100%;
     word-break: break-word;
-    font-size: 12px;
-    padding: 0 12px;
+    font-size: 14px;
+    padding: 8px 0 0;
   }
 
-  .dh-card-scaler {
+  #daggerheart-hand .dh-card-scaler {
     border: none;
     border-radius: 16px;
     background: none;
     }
 
-  .dh-card-scaler .card-level {
+  #daggerheart-hand .dh-card-scaler .card-level {
     padding-right: 6px;
     color: #fff;
     filter: none;
     text-shadow: none;
   }
 
-  .dh-card-scaler .stress_text {
+  #daggerheart-hand .dh-card-scaler .stress_text {
     top: 3%;
     right: 4.5%;
     padding: 7px 2px 0px 3px;
@@ -352,7 +359,7 @@ const cssContent = `
     text-shadow: none;
   }
 
-  .dh-card-scaler .stress_image {
+  #daggerheart-hand .dh-card-scaler .stress_image {
     top: 3%;
     right: 4%;
   }
@@ -395,38 +402,17 @@ const ImprovedTemplate = {
    */
   renderCard: (item) => {
     const img = item.img || 'icons/svg/item-bag.svg';
-    const desc = item.system.description?.value || item.system.description || "";
 
     // Очистка и расчет текста описания — используем общий метод HandManager.formatDescription
     const tempDiv = document.createElement("div");
-    const processed = HandManager.formatDescription(desc);
+    const processed = HandManager.getCardDescription(item);
     tempDiv.innerHTML = processed;
     // Keep HTML (innerHTML) so formatting tags are preserved when inserted into the card
     let plainDesc = tempDiv.innerHTML || tempDiv.innerText || "";
 
     // Расчет размера шрифта
-    // Mapping rule:
-    // - textLength <= 360 => fontSize = maxFontSize
-    // - textLength >= 940 => fontSize = minFontSize
-    // - otherwise interpolate linearly between maxFontSize and minFontSize
-    let minFontSize = 12;
-    let maxFontSize = 14;
-    let fontSize = maxFontSize;
+    const fontSize = 14;
 
-    const textLength = plainDesc.length;
-    if (textLength <= 360) {
-      fontSize = maxFontSize;
-    } else if (textLength >= 940) {
-      fontSize = minFontSize;
-    } else {
-      const t = (textLength - 360) / (940 - 360); // 0..1
-      fontSize = Math.round(maxFontSize + (minFontSize - maxFontSize) * t);
-    }
-    // clamp just in case
-    fontSize = Math.max(minFontSize, Math.min(maxFontSize, fontSize));
-
-
-    // Определение домена
     let domainKey = "default";
     let domainCardType = "default";
     if (item.system.domain) {
@@ -450,7 +436,7 @@ const ImprovedTemplate = {
     const stressCost = item.system.stress;
 
     let costValue = '';
-    if (recallCost !== null && recallCost !== undefined && recallCost !== 0) {
+    if (recallCost !== null && recallCost !== undefined && (item.type === 'domainCard' || recallCost !== 0)) {
       costValue = recallCost;
     } else if (stressCost !== null && stressCost !== undefined && stressCost !== 0) {
       costValue = stressCost;
@@ -468,12 +454,12 @@ const ImprovedTemplate = {
       const damageLabels = HandManager._getDamageLabels(item);
       const rangeRaw = item.system?.attack?.range || item.system?.range || '';
       const rangeText = HandManager.formatRange(rangeRaw);
-      if (damageFormula) {
+      if (damageFormula || damageLabels || rangeText) {
         damageHtml = `
              <div class="damage-info">
-                 <span class="damage-formula">${damageFormula}</span>
-                 <span class="damage-labels">${damageLabels}</span>
-                 ${rangeText ? `<span class="damage-range">${rangeText}</span>` : ''}
+                 <span class="damage-formula">${HandManager.escapeHtml(damageFormula)}</span>
+                 <span class="damage-labels">${HandManager.escapeHtml(damageLabels)}</span>
+                 ${rangeText ? `<span class="damage-range">${HandManager.escapeHtml(rangeText)}</span>` : ''}
              </div>
          `;
       }
@@ -497,11 +483,11 @@ const ImprovedTemplate = {
                     </div>
                     <div class="card-title">${HandManager.escapeHtml(item.name)}</div>
                     ${damageHtml}
-                    <div class="description" style="font-size: ${fontSize}px;">
+                    <div class="description" data-card-description style="font-size: ${fontSize}px;">
                     ${plainDesc}</div>
                 </div>
                     `;
     return html;
   }
 };
-registerTemplate(ImprovedTemplate);
+registerTemplate(ImprovedTemplate);    const fontSize = 14;

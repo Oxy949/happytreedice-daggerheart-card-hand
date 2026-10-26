@@ -4,7 +4,7 @@ import { HandManager } from '../../scripts/hand-manager.js';
 /**
  * Standard Daggerheart Template.
  * Replicates the official Daggerheart card layout using the Foundryborne
- * system fonts (Cinzel Decorative / Cinzel / Montserrat) and its domain assets.
+ * system fonts (Overpass / Montserrat) and its domain assets.
  */
 
 // Цвет текста типа карты в гексагоне полосы (сама полоса окрашена в ассете домена)
@@ -32,9 +32,8 @@ const cssContent = `
 
     /* Foundryborne system fonts (loaded globally by the daggerheart system).
        The var() indirection picks up the system's own definitions on 2.4.x+. */
-    --dh-card-font-title: var(--dh-font-subtitle, 'Cinzel', serif);
-    --dh-card-font-deco: var(--dh-font-title, 'Cinzel Decorative', serif);
-    --dh-card-font-body: var(--dh-font-body, 'Montserrat', sans-serif);
+    --dh-card-font-title: var(--dh-font-description, 'Overpass'), 'Arial', sans-serif;
+    --dh-card-font-body: var(--dh-font-body, 'Montserrat'), 'Arial', sans-serif;
 
     position: fixed;
     bottom: 0;
@@ -53,7 +52,7 @@ const cssContent = `
     transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .hand-wrapper {
+  #daggerheart-hand .hand-wrapper {
     position: relative;
     height: 250px;
     pointer-events: all;
@@ -63,7 +62,7 @@ const cssContent = `
     align-items: flex-end;
   }
 
-  .hand-background-plate {
+  #daggerheart-hand .hand-background-plate {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -79,17 +78,17 @@ const cssContent = `
     pointer-events: all;
   }
 
-  .drag-handle-area {
+  #daggerheart-hand .drag-handle-area {
     width: 100%;
     height: 100%;
     cursor: grab;
   }
 
-  .drag-handle-area:active {
+  #daggerheart-hand .drag-handle-area:active {
     cursor: grabbing;
   }
 
-  .dh-cards-container {
+  #daggerheart-hand .dh-cards-container {
     position: relative;
     width: 100%;
     height: 100%;
@@ -105,18 +104,14 @@ const cssContent = `
   /* --- Official-style card ------------------------------------------- */
 
   #daggerheart-hand .dh-card-scaler {
-    border: 1px solid #b9b2a4;
-    border-radius: 18px;
-    background: #fdfbf4;
+    border: none;
+    border-radius: 14px;
+    background: #fff;
     box-shadow: -4px 4px 20px rgba(0, 0, 0, 0.6);
   }
 
-  #daggerheart-hand .dh-card-scaler * {
-    font-family: var(--dh-card-font-body);
-  }
-
   /* Card art fills the upper half */
-  .dhc-art-container {
+  #daggerheart-hand .dhc-art-container {
     position: absolute;
     top: 0;
     left: 0;
@@ -128,7 +123,7 @@ const cssContent = `
     background: #000;
   }
 
-  .dhc-art {
+  #daggerheart-hand .dhc-art {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -137,24 +132,24 @@ const cssContent = `
   }
 
   /* Level banner (domain pennant, icon baked into the asset) */
-  .dhc-banner {
+  #daggerheart-hand .dhc-banner {
     position: absolute;
-    top: -6px;
+    top: -4px;
     left: 16px;
-    width: 58px;
+    width: 68px;
     z-index: 10;
     filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
     pointer-events: none;
   }
 
-  .dhc-level {
+  #daggerheart-hand .dhc-level {
     position: absolute;
-    top: 8px;
+    top: 14px;
     left: 16px;
-    width: 58px;
+    width: 68px;
     text-align: center;
     font-family: var(--dh-card-font-title);
-    font-weight: 700;
+    font-weight: 900;
     font-size: 26px;
     color: #fff;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
@@ -165,22 +160,22 @@ const cssContent = `
   }
 
   /* Recall cost badge (top-right) */
-  .dhc-recall {
+  #daggerheart-hand .dhc-recall {
     position: absolute;
-    top: 10px;
-    right: 12px;
-    width: 42px;
+    top: 24px;
+    right: 24px;
+    width: 36px;
     z-index: 10;
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
     pointer-events: none;
   }
 
-  .dhc-recall-text {
+  #daggerheart-hand .dhc-recall-text {
     position: absolute;
-    top: 10px;
-    right: 12px;
-    width: 42px;
-    height: 42px;
+    top: 24px;
+    right: 24px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -196,7 +191,7 @@ const cssContent = `
   }
 
   /* Gold divider strip with the domain-colored hexagon (official style) */
-  .dhc-strip-wrap {
+  #daggerheart-hand .dhc-strip-wrap {
     position: absolute;
     top: 51%;
     left: 0;
@@ -206,13 +201,13 @@ const cssContent = `
     pointer-events: none;
   }
 
-  .dhc-strip {
+  #daggerheart-hand .dhc-strip {
     display: block;
     width: 100%;
     height: auto;
   }
 
-  .dhc-type {
+  #daggerheart-hand .dhc-type {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -232,18 +227,18 @@ const cssContent = `
     z-index: 9;
   }
 
-  .dhc-type.dhc-type-long {
+  #daggerheart-hand .dhc-type.dhc-type-long {
     font-size: 9px;
     letter-spacing: 0.2px;
   }
 
-  .dhc-type.dhc-type-xlong {
+  #daggerheart-hand .dhc-type.dhc-type-xlong {
     font-size: 8px;
     letter-spacing: 0;
   }
 
   /* Lower half: title + rules text */
-  .dhc-body {
+  #daggerheart-hand .dhc-body {
     position: absolute;
     top: 51%;
     left: 0;
@@ -253,42 +248,43 @@ const cssContent = `
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    padding: 20px 18px 14px;
-    background:
-      linear-gradient(180deg, rgba(253, 251, 244, 0) 0%, rgba(253, 251, 244, 0) 60%, rgba(240, 234, 218, 0.6) 100%),
-      #fdfbf4;
-    border-radius: 0 0 17px 17px;
+    padding: 20px 20px 16px;
+    background: #fff;
+    border-radius: 0 0 14px 14px;
   }
 
-  .dhc-title {
+  #daggerheart-hand .dhc-title {
     font-family: var(--dh-card-font-title);
-    font-weight: 700;
+    font-weight: 900;
     text-transform: uppercase;
-    font-size: 24px;
-    line-height: 1.05;
+    font-size: 21px;
+    line-height: 1.12;
     text-align: center;
     color: #231f20;
     margin: 0 0 8px 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    flex: 0 0 auto;
+    overflow-wrap: anywhere;
+    border: 0;
+    padding: 0;
   }
 
-  .dhc-text {
+  #daggerheart-hand .dhc-text {
     flex: 1;
+    min-height: 0;
     color: #231f20;
     line-height: 1.3;
-    text-align: center;
-    overflow: hidden;
+    text-align: left;
+    overflow: auto;
+    overflow-wrap: anywhere;
+    scrollbar-width: thin;
+    overscroll-behavior: contain;
   }
 
-  .dhc-text p { margin: 0 0 5px 0; }
-  .dhc-text ul, .dhc-text ol { margin: 0; padding-left: 16px; text-align: left; }
+  #daggerheart-hand .dhc-text p { margin: 0 0 5px 0; }
+  #daggerheart-hand .dhc-text ul, #daggerheart-hand .dhc-text ol { margin: 0; padding-left: 16px; text-align: left; }
 
   /* Weapon damage block */
-  .damage-info {
+  #daggerheart-hand .damage-info {
     position: relative;
     z-index: 7;
     color: #231f20;
@@ -306,11 +302,11 @@ const cssContent = `
     margin-bottom: 8px;
   }
 
-  .damage-info + .dhc-text {
+  #daggerheart-hand .damage-info + .dhc-text {
     margin-top: 0;
   }
 
-  .damage-labels {
+  #daggerheart-hand .damage-labels {
     font-family: var(--dh-card-font-body);
     font-size: 12px;
     font-weight: 600;
@@ -320,7 +316,7 @@ const cssContent = `
     margin-top: 2px;
   }
 
-  .damage-range {
+  #daggerheart-hand .damage-range {
     font-family: var(--dh-card-font-body);
     font-size: 11px;
     font-weight: 600;
@@ -372,26 +368,12 @@ const DefaultTemplate = {
   renderCard: (item) => {
     const esc = HandManager.escapeHtml.bind(HandManager);
     const img = item.img || 'icons/svg/item-bag.svg';
-    const desc = item.system.description?.value || item.system.description || '';
-
-    const processed = HandManager.formatDescription(desc);
+    const processed = HandManager.getCardDescription(item);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = processed;
     const descHtml = tempDiv.innerHTML || '';
-    const textLength = (tempDiv.textContent || '').length;
+    const fontSize = 14;
 
-    // Автоподбор размера шрифта описания: 360 символов -> 15px, 940+ -> 11px
-    const minFontSize = 11;
-    const maxFontSize = 15;
-    let fontSize = maxFontSize;
-    if (textLength >= 940) {
-      fontSize = minFontSize;
-    } else if (textLength > 360) {
-      const t = (textLength - 360) / (940 - 360);
-      fontSize = Math.round(maxFontSize + (minFontSize - maxFontSize) * t);
-    }
-
-    // Определение домена
     let domainKey = 'default';
     if (item.system.domain) {
       domainKey = String(item.system.domain).toLowerCase();
@@ -411,7 +393,7 @@ const DefaultTemplate = {
     const stressCost = item.system.stress;
 
     let costValue = '';
-    if (recallCost !== null && recallCost !== undefined && recallCost !== 0) {
+    if (recallCost !== null && recallCost !== undefined && (item.type === 'domainCard' || recallCost !== 0)) {
       costValue = recallCost;
     } else if (stressCost !== null && stressCost !== undefined && stressCost !== 0) {
       costValue = stressCost;
@@ -435,7 +417,7 @@ const DefaultTemplate = {
       const damageLabels = HandManager._getDamageLabels(item);
       const rangeRaw = item.system?.attack?.range || item.system?.range || '';
       const rangeText = HandManager.formatRange(rangeRaw);
-      if (damageFormula) {
+      if (damageFormula || damageLabels || rangeText) {
         damageHtml = `
             <div class="damage-info">
                 <span class="damage-formula">${esc(damageFormula)}</span>
@@ -460,7 +442,7 @@ const DefaultTemplate = {
         <div class="dhc-body">
           <h3 class="dhc-title">${esc(item.name)}</h3>
           ${damageHtml}
-          <div class="dhc-text" style="font-size: ${fontSize}px;">${descHtml}</div>
+          <div class="dhc-text" data-card-description style="font-size: ${fontSize}px;">${descHtml}</div>
         </div>
     `;
   }

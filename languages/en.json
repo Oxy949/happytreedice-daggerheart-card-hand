@@ -17,6 +17,8 @@
             "FILTER_EQUIPPED_HINT": "Hides items that are not equipped.",
             "SCALE_NAME": "Interface Scale",
             "SCALE_HINT": "Module size multiplier (0.5 - 2.0).",
+            "HEIGHT_NAME": "Expanded Hand Height (px)",
+            "HEIGHT_HINT": "Distance in pixels that the expanded hand is raised above the bottom of the screen. Auto-hide still moves it fully off-screen.",
             "WIDTH_NAME": "Panel Width (px)",
             "WIDTH_HINT": "Fixed width of the card panel (min 600).",
             "ENABLED_NAME": "Enable Card Hand",

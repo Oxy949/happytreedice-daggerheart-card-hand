@@ -18,7 +18,6 @@ export function registerHooks() {
     Hooks.once('ready', () => {
         HandManager.createHandPanel();
         setupRuntimeHooks();
-        HandManager.restorePosition();
 
         if (HandManager.getHandActor()) {
             HandManager.refreshHand();
@@ -27,6 +26,7 @@ export function registerHooks() {
 }
 
 function setupRuntimeHooks() {
+    window.addEventListener('resize', () => HandManager.applyStyles());
     Hooks.on("controlToken", () => {
         const actor = HandManager.getHandActor();
         if (!actor) {

@@ -1,7 +1,8 @@
 /* --- Dragging State --- */
 
 /* Класс, добавляемый элементу при начале перетаскивания */
-.dragging {
+#daggerheart-hand.dragging,
+#daggerheart-hand .dragging {
     cursor: grabbing !important;
     opacity: 0.9 !important;
     /* Важно убрать transition, чтобы элемент мгновенно следовал за курсором без задержек */
@@ -10,7 +11,7 @@
 }
 
 /* Вспомогательный класс для превью (если используется ghost image) */
-.drag-preview {
+#daggerheart-hand .drag-preview {
     cursor: grabbing !important;
     z-index: 9999 !important;
 }
@@ -23,8 +24,8 @@ body.dragging-active {
 }
 
 /* --- Dragging State --- */
-.drag-preview,
-.dragging {
+#daggerheart-hand .drag-preview,
+#daggerheart-hand .dragging {
     cursor: grabbing !important;
     opacity: 0.9 !important;
     transition: none !important;
@@ -32,11 +33,11 @@ body.dragging-active {
 }
 
 
-.drag-handle-area:active {
+#daggerheart-hand .drag-handle-area:active {
     cursor: grabbing;
 }
 
-.no-cards {
+#daggerheart-hand .no-cards {
     color: var(--dh-text);
     opacity: 0.5;
     align-self: center;
@@ -45,7 +46,7 @@ body.dragging-active {
     pointer-events: all;
 }
 
-.dh-card-scaler .card-level {
+#daggerheart-hand .dh-card-scaler .card-level {
     font-size: 23.8px;
     top: 2%;
     left: 4%;
@@ -63,7 +64,7 @@ body.dragging-active {
     pointer-events: none;
 }
 
-.dh-card-scaler .card-banner_image {
+#daggerheart-hand .dh-card-scaler .card-banner_image {
     left: 5%;
     top: -15px;
     box-sizing: border-box;
@@ -78,7 +79,7 @@ body.dragging-active {
     z-index: 10;
 }
 
-.dh-card-scaler .stress_image {
+#daggerheart-hand .dh-card-scaler .stress_image {
     position: absolute;
     width: 32px;
     top: 5%;
@@ -87,7 +88,7 @@ body.dragging-active {
     filter: drop-shadow(0 0 5px rgba(0, 0, 0, .333));
 }
 
-.dh-card-scaler .stress_text {
+#daggerheart-hand .dh-card-scaler .stress_text {
     position: absolute;
     font-family: var(--dh-font-header);
     top: 5%;
@@ -102,7 +103,7 @@ body.dragging-active {
     pointer-events: none;
 }
 
-.dh-card-scaler .card-image-container {
+#daggerheart-hand .dh-card-scaler .card-image-container {
     width: 100%;
     height: 220px;
     overflow: hidden;
@@ -111,7 +112,7 @@ body.dragging-active {
     border-bottom: none;
 }
 
-.dh-card-scaler .card-main-image {
+#daggerheart-hand .dh-card-scaler .card-main-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -119,7 +120,7 @@ body.dragging-active {
     background: #000;
 }
 
-.dh-card-scaler .divider-container {
+#daggerheart-hand .dh-card-scaler .divider-container {
     position: relative;
     width: 100%;
     height: 0;
@@ -129,7 +130,7 @@ body.dragging-active {
     align-items: center;
 }
 
-.dh-card-scaler .title-bg {
+#daggerheart-hand .dh-card-scaler .title-bg {
     position: absolute;
     top: 15px;
     left: 50%;
@@ -143,7 +144,7 @@ body.dragging-active {
     z-index: 7;
 }
 
-.dh-card-scaler .title {
+#daggerheart-hand .dh-card-scaler .title {
     position: absolute;
     left: 50%;
     top: 15px;
@@ -165,7 +166,7 @@ body.dragging-active {
     text-overflow: ellipsis;
 }
 
-.dh-card-scaler .card-text-content {
+#daggerheart-hand .dh-card-scaler .card-text-content {
     flex-grow: 1;
     font-weight: 500;
     font-size: 12.41px;
@@ -180,31 +181,40 @@ body.dragging-active {
     flex-direction: column;
 }
 
-.dh-card-scaler .description {
+#daggerheart-hand .dh-card-scaler .description {
     margin-top: 10%;
     color: #000;
     line-height: 1.3;
     overflow: hidden;
 }
 
-.dh-card:hover {
+#daggerheart-hand .dh-hand-card:hover,
+#daggerheart-hand .dh-hand-card:focus-within {
     z-index: 1000 !important;
 }
 
-.dh-card:hover .dh-card-scaler {
-    transform: translateY(-50px) scale(0.75);
+#daggerheart-hand .dh-hand-card:hover .dh-card-scaler,
+#daggerheart-hand .dh-hand-card:focus-within .dh-card-scaler {
+    transform: translateY(-20px) scale(var(--dh-preview-scale, 1));
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
     border-color: #afb0d9;
 }
 
-.dh-card-scaler {
+#daggerheart-hand .dh-hand-card:focus-visible .dh-card-scaler {
+    outline: 3px solid #f3c267;
+    outline-offset: 3px;
+}
+
+#daggerheart-hand .dh-card-scaler {
     position: absolute;
     bottom: 0;
-    left: -50%;
-    width: 320px;
-    height: 440px;
+    left: 50%;
+    width: 350px;
+    height: 490px;
+    margin-left: -175px;
+    box-sizing: border-box;
 
-    transform: scale(0.5);
+    transform: scale(var(--dh-hand-card-scale, 0.457143));
     transform-origin: center bottom;
 
     background: #fff;
@@ -220,8 +230,34 @@ body.dragging-active {
     transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.6s, border-color 0.6s;
 }
 
-.dh-card-scaler * {
-    font-family: var(--dh-font-body);
+#daggerheart-hand .dh-card-scaler {
+    font-family: var(--dh-card-font-body, var(--dh-font-body, 'Arial')), sans-serif;
+}
+
+#daggerheart-hand .dh-card-scaler img {
+    border: 0;
+    border-radius: 0;
+}
+
+#daggerheart-hand .hand-background-plate {
+    height: calc(var(--dh-hand-card-height, 224px) - 28px);
+}
+
+#daggerheart-hand .dh-cards-container {
+    box-sizing: border-box;
+}
+
+#daggerheart-hand [data-card-description] {
+    user-select: text;
+    cursor: auto;
+}
+
+#daggerheart-hand [data-card-description] p {
+    margin: 0 0 0.45em;
+}
+
+#daggerheart-hand [data-card-description] p:last-child {
+    margin-bottom: 0;
 }
 
 #daggerheart-hand.hidden {
@@ -229,17 +265,17 @@ body.dragging-active {
 }
 
 #daggerheart-hand.collapsed .hand-wrapper {
-    height: 0;
+    height: 0 !important;
 }
 
 #daggerheart-hand.collapsed .hand-background-plate {
     display: none;
 }
 
-.dh-card {
+#daggerheart-hand .dh-hand-card {
     position: relative;
-    width: 160px;
-    height: 220px;
+    width: var(--dh-hand-card-width, 160px);
+    height: var(--dh-hand-card-height, 224px);
     margin: 0;
     transform-origin: center bottom;
     flex-shrink: 0;
@@ -254,7 +290,13 @@ body.dragging-active {
     user-select: none;
 }
 
-  .dh-card-scaler .description ul,
-  .dh-card-scaler .description ol {
+  #daggerheart-hand .dh-card-scaler .description ul,
+  #daggerheart-hand .dh-card-scaler .description ol {
     margin: 0 0;
   }
+
+@media (prefers-reduced-motion: reduce) {
+    #daggerheart-hand, #daggerheart-hand * {
+        transition-duration: 0.01ms !important;
+    }
+}

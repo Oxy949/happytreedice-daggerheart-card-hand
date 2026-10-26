@@ -16,6 +16,7 @@ export class HandManager {
     static SETTING_FILTER_EQUIPPED = 'filterEquipped';
     static SETTING_SCALE = 'handScale';
     static SETTING_WIDTH = 'handWidthPx';
+    static SETTING_HEIGHT = 'expandedHandHeightPx';
     static SETTING_BOTTOM = 'bottom';
     static SETTING_SHOW_WEAPONS = 'showWeapons';
     static SETTING_SHOW_DOMAIN_CARDS = 'showDomainCards';
@@ -52,6 +53,7 @@ export class HandManager {
                 [this.SETTING_FILTER_EQUIPPED]: true,
                 [this.SETTING_SCALE]: 1.0,
                 [this.SETTING_WIDTH]: 800,
+                [this.SETTING_HEIGHT]: 0,
                 [this.SETTING_BOTTOM]: 15,
                 [this.SETTING_HIDE_BACKGROUND]: false,
                 [this.SETTING_SHOW_WEAPONS]: true,
@@ -164,6 +166,17 @@ export class HandManager {
             }
         });
 
+        game.settings.register(this.MODULE_NAME, this.SETTING_HEIGHT, {
+            name: this.translate('SETTINGS.HEIGHT_NAME'),
+            hint: this.translate('SETTINGS.HEIGHT_HINT'),
+            scope: 'client',
+            config: true,
+            type: Number,
+            default: 0,
+            range: { min: 0, max: 500, step: 1 },
+            onChange: () => this.applyStyles()
+        });
+
         const types = [
             { id: this.SETTING_SHOW_WEAPONS, name: "SETTINGS.SHOW_WEAPONS_NAME", hint: "SETTINGS.SHOW_WEAPONS_HINT" },
             { id: this.SETTING_SHOW_DOMAIN_CARDS, name: "SETTINGS.SHOW_DOMAIN_CARDS_NAME", hint: "SETTINGS.SHOW_DOMAIN_CARDS_HINT" },
@@ -221,12 +234,21 @@ export class HandManager {
 
     // --- Helpers ---
 
-    static _getDamageFormula(item) {
-        const parts = item.system.attack?.damage?.parts;
-        if (!parts) return "";
+    /** DamageField changed from parts to main/resources in Daggerheart 2.11. */
+    static _getDamageParts(item) {
+        const damage = item.system?.attack?.damage;
+        if (!damage) return [];
+        if (damage.main) return [damage.main];
+        const parts = damage.parts;
+        if (!parts) return [];
+        return typeof parts[Symbol.iterator] === 'function' ? Array.from(parts) : Object.values(parts);
+    }
 
-        const RollCls = foundry.dice?.Roll ?? Roll;
-        const rollData = item.actor?.getRollData?.() ?? {};
+    static _getDamageFormula(item) {
+        const parts = this._getDamageParts(item);
+
+        const RollCls = globalThis.foundry?.dice?.Roll ?? globalThis.Roll;
+        const rollData = item.system?.getRollData?.() ?? item.actor?.getRollData?.() ?? {};
         const formulas = [];
 
         // parts is an IterableTypedObjectField in Foundryborne (iterable of DHDamageData)
@@ -241,12 +263,12 @@ export class HandManager {
             } else if (value.custom?.enabled) {
                 formula = value.custom.formula;
             } else {
-                const multiplier = value.multiplier === 'flat' ? value.flatMultiplier : `@${value.multiplier}`;
+                const multiplier = value.multiplier === 'flat' ? (value.flatMultiplier ?? 1) : (value.multiplier ? `@${value.multiplier}` : 1);
                 const bonus = value.bonus ? (value.bonus < 0 ? ` - ${Math.abs(value.bonus)}` : ` + ${value.bonus}`) : '';
                 formula = `${multiplier ?? 1}${value.dice}${bonus}`;
             }
 
-            if (RollCls.replaceFormulaData) {
+            if (RollCls?.replaceFormulaData) {
                 formula = RollCls.replaceFormulaData(formula, rollData);
             }
             formulas.push(formula);
@@ -256,8 +278,7 @@ export class HandManager {
     }
 
     static _getDamageLabels(item) {
-        const parts = item.system.attack?.damage?.parts;
-        if (!parts) return "";
+        const parts = this._getDamageParts(item);
 
         const uniqueTypes = new Set();
         for (const part of parts) {
@@ -275,6 +296,21 @@ export class HandManager {
         }
 
         return labels.join(" / ");
+    }
+
+    /** Synchronous fallback for older systems and external templates. */
+    static getCardDescription(item) {
+        const system = item.system ?? {};
+        const description = typeof system.description === 'string' ? system.description : system.description?.value ?? '';
+        if (item.type !== 'weapon') return this.formatDescription(description);
+        const config = CONFIG.DH?.ITEM?.allWeaponFeatures?.() ?? CONFIG.DH?.ITEM?.weaponFeatures ?? {};
+        const features = system.itemFeatures ?? system.weaponFeatures ?? [];
+        const entries = Object.entries(features).map(([key, value]) => {
+            const feature = config[value?.value ?? value?.id ?? (typeof value === 'string' ? value : key)];
+            if (!feature) return '';
+            return `<p><strong>${this.escapeHtml(game.i18n.localize(feature.label))}:</strong> ${game.i18n.localize(feature.description ?? '')}</p>`;
+        });
+        return this.formatDescription([...entries, description].join(''));
     }
 
     /**
@@ -419,7 +455,7 @@ export class HandManager {
                 stress: 0,
                 attack: {
                     roll: atk?.roll ?? {},
-                    damage: {
+                    damage: atk?.damage ?? {
                         parts,
                         includeBase: atk?.damage?.includeBase ?? false,
                         direct: atk?.damage?.direct ?? false
@@ -531,6 +567,7 @@ export class HandManager {
         this._dndInstance = new SmoothDnD('#daggerheart-hand', '#dh-hand-drag-target', (newLeft) => {
             this.savePosition(newLeft);
         });
+        this.restorePosition();
 
         // Setup auto-hide behavior (hover to show, timeout to hide)
         this.setupAutoHideHandlers();
@@ -594,18 +631,27 @@ export class HandManager {
             }
         }
 
-        const scale = this.getSetting(this.SETTING_SCALE);
-        const width = Math.max(600, this.getSetting(this.SETTING_WIDTH));
+        const scale = Number(this.getSetting(this.SETTING_SCALE)) || 1;
+        const width = Math.min(Math.max(600, this.getSetting(this.SETTING_WIDTH)), (window.innerWidth - 32) / scale);
+        const height = 224;
+        const bottom = Number(this.getSetting(this.SETTING_BOTTOM)) || 0;
+        const lift = Math.max(0, Math.min(500, Number(this.getSetting(this.SETTING_HEIGHT)) || 0,
+            window.innerHeight - scale * (height + bottom + 20)));
+        this._panel.style.bottom = `${lift}px`;
         const wrapper = this._panel.querySelector('.hand-wrapper');
 
         // Apply configurable bottom padding for the cards container
-        const bottom = Number(this.getSetting(this.SETTING_BOTTOM)) || 0;
         if (this._container) this._container.style.paddingBottom = `${bottom}px`;
+        this._panel.style.setProperty('--dh-hand-card-height', `${height}px`);
+        this._panel.style.setProperty('--dh-hand-card-width', `${height * 5 / 7}px`);
+        this._panel.style.setProperty('--dh-hand-card-scale', height / 490);
+        this._panel.style.setProperty('--dh-preview-scale', Math.max(height / 490, Math.min(1, ((window.innerHeight - lift) / scale - bottom - 40) / 490)));
 
         if (wrapper) {
             wrapper.style.transform = `scale(${scale})`;
             wrapper.style.transformOrigin = 'bottom center';
             wrapper.style.width = `${width}px`;
+            wrapper.style.height = `${height + bottom + 12}px`;
         }
 
         this.applyCardFanLayout();
@@ -637,8 +683,7 @@ export class HandManager {
             if (!this._panel) return;
 
             this._panel.style.left = `${pos.left}px`;
-            this._panel.style.transform = 'translateX(0)';
-            this._panel.style.bottom = '0px';
+            this._panel.style.transform = 'translateX(-50%)';
 
             if (this._dndInstance) {
                 this._dndInstance.updatePosition(pos.left);
@@ -666,12 +711,19 @@ export class HandManager {
         this._panel.addEventListener('mouseleave', () => {
             this.startAutoHideTimer();
         }, options);
+        this._panel.addEventListener('focusin', () => {
+            this.clearAutoHideTimer();
+            this.showHandByY();
+        }, options);
+        this._panel.addEventListener('focusout', event => {
+            if (!this._panel.contains(event.relatedTarget)) this.startAutoHideTimer();
+        }, options);
     }
 
     static startAutoHideTimer() {
         this.clearAutoHideTimer();
         const secs = Number(this.getSetting(this.SETTING_AUTOHIDE)) || 0;
-        if (!this._panel || secs <= 0 || this._activeCardDrags > 0) return;
+        if (!this._panel || secs <= 0 || this._activeCardDrags > 0 || this._panel.contains(document.activeElement)) return;
 
         this._autoHideTimer = setTimeout(() => {
             if (this._activeCardDrags > 0) return;
@@ -711,10 +763,11 @@ export class HandManager {
         if (!wrapper) return;
         if (this._activeCardDrags > 0) return;
 
-        const wrapperHeight = wrapper.offsetHeight || 250;
+        const wrapperHeight = wrapper.getBoundingClientRect().height || 250;
         // Move the panel down by (wrapperHeight + extra) so cards are off-screen vertically
         const extra = 24;
-        const y = wrapperHeight + extra;
+        const lift = parseFloat(this._panel.style.bottom) || 0;
+        const y = wrapperHeight + lift + extra;
         this.setPanelYOffset(y);
     }
 
@@ -843,10 +896,29 @@ export class HandManager {
      */
     static createCardElement(item, template) {
         const el = document.createElement('div');
-        el.className = 'dh-card';
+        // The system now uses .dh-card for its own responsive cards.
+        el.className = 'dh-hand-card';
         el.dataset.itemId = item.id;
         el.dataset.type = item.type;
+        el.tabIndex = 0;
+        el.setAttribute('aria-label', item.name);
         el.innerHTML = `<div class="dh-card-scaler">${template.renderCard(item)}</div>`;
+        el.addEventListener('keydown', event => {
+            if (event.target !== el || !['Enter', ' '].includes(event.key)) return;
+            event.preventDefault();
+            this.useItem(item, event);
+        });
+
+        const description = el.querySelector('[data-card-description]');
+        if (description) description.tabIndex = 0;
+        if (description && typeof item.system?.getEnrichedDescription === 'function') {
+            // Let the installed system supply weapon features and resolve its enrichers.
+            Promise.resolve().then(() => item.system.getEnrichedDescription({ type: 'embed', gmNotes: false }))
+                .then(html => {
+                    if (el.isConnected && typeof html === 'string') description.innerHTML = html;
+                })
+                .catch(error => console.warn(`${this.MODULE_NAME} | Failed to enrich ${item.name}`, error));
+        }
 
         new CardSmoothDnD(el, () => {
             this.useItem(item);
@@ -900,14 +972,14 @@ export class HandManager {
     static applyCardFanLayout() {
         if (!this._container) return;
 
-        const cards = [...this._container.children].filter(el => el.classList.contains('dh-card'));
+        const cards = [...this._container.children].filter(el => el.classList.contains('dh-hand-card'));
         const count = cards.length;
         if (count === 0) return;
 
         const maxAngle = this.getSetting(this.SETTING_ARC_ANGLE);
         const wrapper = this._panel?.querySelector('.hand-wrapper');
         const wrapperWidth = wrapper?.clientWidth || 0;
-        const cardWidth = 160;
+        const cardWidth = cards[0].offsetWidth || 160;
         const availableSpace = wrapperWidth - 40;
 
         let marginLeft = -20;
@@ -918,7 +990,7 @@ export class HandManager {
             marginLeft = spacePerCard - cardWidth;
         }
 
-        marginLeft = Math.max(marginLeft, -140);
+        marginLeft = Math.max(marginLeft, 20 - cardWidth);
         marginLeft = Math.min(marginLeft, 5);
 
         const centerIndex = (count - 1) / 2;
